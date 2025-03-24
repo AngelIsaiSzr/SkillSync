@@ -294,7 +294,7 @@ fun HomeScreen(navController: NavController) {
 
                         // Botones de acción
                         Button(
-                            onClick = { navController.navigate("perfil") },
+                            onClick = { navController.navigate("profile") },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(56.dp),
@@ -312,7 +312,7 @@ fun HomeScreen(navController: NavController) {
                         }
 
                         OutlinedButton(
-                            onClick = { navController.navigate("perfil") },
+                            onClick = { navController.navigate("profile") },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(56.dp),
