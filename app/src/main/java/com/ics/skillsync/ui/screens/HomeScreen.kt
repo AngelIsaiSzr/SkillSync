@@ -43,7 +43,7 @@ fun HomeScreen(navController: NavController) {
     val categories = remember { SkillCategory.values().toList() }
     var selectedCategory by remember { mutableStateOf<SkillCategory?>(null) }
 
-    // Mostrar solo las primeras 4 habilidades
+    // Mostrar principales habilidades
     val popularSkills = remember {
         listOf(
             Skill(
@@ -261,20 +261,20 @@ fun HomeScreen(navController: NavController) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 48.dp), // Más margen vertical
-                        verticalArrangement = Arrangement.spacedBy(16.dp) // Espaciado general entre secciones
+                            .padding(horizontal = 16.dp, vertical = 48.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         // Títulos principales
                         Column(
-                            modifier = Modifier.padding(bottom = 12.dp), // Reduce separación entre textos
-                            verticalArrangement = Arrangement.spacedBy(4.dp) // Espaciado menor entre textos
+                            modifier = Modifier.padding(bottom = 12.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             Text(
                                 text = "Intercambia\nconocimientos.",
                                 color = Color.White,
                                 fontSize = 40.sp,
                                 fontWeight = FontWeight.Bold,
-                                lineHeight = 44.sp // Ajuste para reducir separación entre líneas
+                                lineHeight = 44.sp
                             )
                             Text(
                                 text = "Crece juntos.",
