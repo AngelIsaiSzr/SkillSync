@@ -86,16 +86,16 @@ fun SplashScreen(navController: NavController) {
                 ) {
                     val path = Path().apply {
                         // Cuerpo rectangular de la flecha
-                        moveTo(size.width * 0.2f, size.height * 0.45f)  // Ajustado para ser más delgado
+                        moveTo(size.width * 0.2f, size.height * 0.45f)
                         lineTo(size.width * 0.6f, size.height * 0.45f)
-                        lineTo(size.width * 0.6f, size.height * 0.55f)  // Ajustado para ser más delgado
+                        lineTo(size.width * 0.6f, size.height * 0.55f)
                         lineTo(size.width * 0.2f, size.height * 0.55f)
                         close()
                         
                         // Punta de la flecha
-                        moveTo(size.width * 0.6f, size.height * 0.35f)  // Ajustado para ser más delgado
+                        moveTo(size.width * 0.6f, size.height * 0.35f)
                         lineTo(size.width * 0.8f, size.height * 0.5f)
-                        lineTo(size.width * 0.6f, size.height * 0.65f)  // Ajustado para ser más delgado
+                        lineTo(size.width * 0.6f, size.height * 0.65f)
                         close()
                     }
                     drawPath(path = path, color = Color.White, style = Fill)
@@ -109,16 +109,16 @@ fun SplashScreen(navController: NavController) {
                 ) {
                     val path = Path().apply {
                         // Cuerpo rectangular de la flecha
-                        moveTo(size.width * 0.4f, size.height * 0.45f)  // Ajustado para ser más delgado
+                        moveTo(size.width * 0.4f, size.height * 0.45f)
                         lineTo(size.width * 0.8f, size.height * 0.45f)
-                        lineTo(size.width * 0.8f, size.height * 0.55f)  // Ajustado para ser más delgado
+                        lineTo(size.width * 0.8f, size.height * 0.55f)
                         lineTo(size.width * 0.4f, size.height * 0.55f)
                         close()
                         
                         // Punta de la flecha
-                        moveTo(size.width * 0.4f, size.height * 0.35f)  // Ajustado para ser más delgado
+                        moveTo(size.width * 0.4f, size.height * 0.35f)
                         lineTo(size.width * 0.2f, size.height * 0.5f)
-                        lineTo(size.width * 0.4f, size.height * 0.65f)  // Ajustado para ser más delgado
+                        lineTo(size.width * 0.4f, size.height * 0.65f)
                         close()
                     }
                     drawPath(path = path, color = Color.White, style = Fill)
