@@ -25,6 +25,12 @@ fun Navigation(navController: NavHostController) {
         composable("chats") {
             ChatsScreen(navController)
         }
+        composable("chat/{chatId}") { backStackEntry ->
+            ChatDetailScreen(
+                chatId = backStackEntry.arguments?.getString("chatId") ?: "",
+                navController = navController
+            )
+        }
         composable("profile") {
             ProfileScreen(navController)
         }
