@@ -17,7 +17,7 @@ class UserRepository(private val userDao: UserDao) {
     ): Result<Long> = withContext(Dispatchers.IO) {
         try {
             if (userDao.isUsernameExists(username)) {
-                return@withContext Result.failure(Exception("El nombre de usuario ya existe"))
+                return@withContext Result.failure(Exception("Ya existe"))
             }
             if (userDao.isEmailExists(email)) {
                 return@withContext Result.failure(Exception("El correo electrónico ya está registrado"))
@@ -41,12 +41,41 @@ class UserRepository(private val userDao: UserDao) {
 
     suspend fun loginUser(username: String, password: String): Result<User> = withContext(Dispatchers.IO) {
         try {
+            // Primero verificar si el usuario existe
+            if (!userDao.isUsernameExists(username)) {
+                return@withContext Result.failure(Exception("No existe"))
+            }
+            
+            // Si el usuario existe, verificar la contraseña
             val user = userDao.getUser(username, password)
+            if (user != null) {
+                userDao.setCurrentUser(user.id)
+                Result.success(user)
+            } else {
+                Result.failure(Exception("Contraseña incorrecta"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getCurrentUser(): Result<User> = withContext(Dispatchers.IO) {
+        try {
+            val user = userDao.getCurrentUser()
             if (user != null) {
                 Result.success(user)
             } else {
-                Result.failure(Exception("Usuario o contraseña incorrectos"))
+                Result.failure(Exception("No hay sesión activa"))
             }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun logout() = withContext(Dispatchers.IO) {
+        try {
+            userDao.clearCurrentUser()
+            Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
         }

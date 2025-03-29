@@ -16,7 +16,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -24,6 +26,13 @@ import coil.compose.AsyncImage
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.ics.skillsync.R
+import com.ics.skillsync.ui.viewmodel.ProfileViewModel
+import com.ics.skillsync.ui.components.SharedNavigationDrawer
+import com.ics.skillsync.ui.components.SharedTopBar
+import com.ics.skillsync.ui.components.SharedBottomBar
+import kotlin.system.exitProcess
 
 data class ChatMessage(
     val id: String,
@@ -37,10 +46,14 @@ data class ChatMessage(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ChatsScreen(navController: NavController) {
-    var searchQuery by remember { mutableStateOf("") }
+fun ChatsScreen(
+    navController: NavController,
+    viewModel: ProfileViewModel
+) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+    var searchQuery by remember { mutableStateOf("") }
+    val isAuthenticated by viewModel.isAuthenticated.collectAsState()
     
     // Datos de ejemplo
     val chats = remember {
@@ -83,204 +96,114 @@ fun ChatsScreen(navController: NavController) {
             )
         )
     }
-
-    ModalNavigationDrawer(
-        drawerState = drawerState,
-        drawerContent = {
-            ModalDrawerSheet {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                ) {
-                    // Logo y nombre en el drawer
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(32.dp)
-                                .background(
-                                    color = Color(0xFF5B4DBC),
-                                    shape = CircleShape
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.SwapHoriz,
-                                contentDescription = "Logo",
-                                tint = Color.White,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                        Text(
-                            text = "SkillSync",
-                            style = MaterialTheme.typography.titleLarge,
-                            color = Color(0xFF5B4DBC)
-                        )
-                    }
-
-                    Divider(modifier = Modifier.padding(vertical = 8.dp))
-
-                    // Opciones del menú
-                    NavigationDrawerItem(
-                        icon = { Icon(Icons.Default.Search, contentDescription = "Buscar") },
-                        label = { Text("Buscar") },
-                        selected = false,
-                        onClick = {
-                            scope.launch {
-                                drawerState.close()
-                            }
-                            navController.navigate("search")
-                        }
-                    )
-
-                    NavigationDrawerItem(
-                        icon = { Icon(Icons.Default.DateRange, contentDescription = "Sesiones") },
-                        label = { Text("Sesiones") },
-                        selected = false,
-                        onClick = {
-                            scope.launch {
-                                drawerState.close()
-                            }
-                            navController.navigate("sessions")
-                        }
-                    )
-
-                    NavigationDrawerItem(
-                        icon = { Icon(Icons.Default.Settings, contentDescription = "Configuración") },
-                        label = { Text("Configuración") },
-                        selected = false,
-                        onClick = {
-                            scope.launch {
-                                drawerState.close()
-                            }
-                            navController.navigate("settings")
-                        }
-                    )
-                }
-            }
-        }
+    
+    SharedNavigationDrawer(
+        navController = navController,
+        viewModel = viewModel,
+        drawerState = drawerState
     ) {
         Scaffold(
             topBar = {
-                TopAppBar(
-                    title = {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(32.dp)
-                                    .background(
-                                        color = Color(0xFF5B4DBC),
-                                        shape = CircleShape
-                                    ),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.SwapHoriz,
-                                    contentDescription = "Logo",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                            Text(
-                                text = "SkillSync",
-                                style = MaterialTheme.typography.titleLarge,
-                                color = Color(0xFF5B4DBC)
-                            )
-                        }
-                    },
-                    actions = {
-                        IconButton(
-                            onClick = {
-                                scope.launch {
-                                    drawerState.open()
-                                }
-                            }
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Menu,
-                                contentDescription = "Menú",
-                                tint = Color(0xFF5B4DBC)
-                            )
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = Color.White,
-                        titleContentColor = Color(0xFF5B4DBC)
-                    )
+                SharedTopBar(
+                    navController = navController,
+                    viewModel = viewModel,
+                    title = "SkillSync",
+                    onDrawerOpen = {
+                        scope.launch { drawerState.open() }
+                    }
                 )
             },
             bottomBar = {
-                NavigationBar(
-                    containerColor = Color.White
-                ) {
-                    NavigationBarItem(
-                        icon = { Icon(Icons.Default.Home, "Inicio") },
-                        label = { Text("Inicio") },
-                        selected = false,
-                        onClick = { navController.navigate("home") }
-                    )
-                    NavigationBarItem(
-                        icon = { Icon(Icons.Default.Explore, "Explorar") },
-                        label = { Text("Explorar") },
-                        selected = false,
-                        onClick = { navController.navigate("explore") }
-                    )
-                    NavigationBarItem(
-                        icon = { Icon(Icons.Default.Message, "Chats") },
-                        label = { Text("Chats") },
-                        selected = true,
-                        onClick = { }
-                    )
-                    NavigationBarItem(
-                        icon = { Icon(Icons.Default.Person, "Perfil") },
-                        label = { Text("Perfil") },
-                        selected = false,
-                        onClick = { navController.navigate("profile") }
-                    )
-                }
-            }
+                SharedBottomBar(navController = navController)
+            },
+            containerColor = Color.White
         ) { paddingValues ->
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .padding(horizontal = 16.dp)
-            ) {
-                // Barra de búsqueda
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
+            if (!isAuthenticated) {
+                Column(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 16.dp),
-                    placeholder = { Text("Buscar chats...") },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Buscar") },
-                    shape = RoundedCornerShape(12.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color(0xFF5B4DBC),
-                        unfocusedBorderColor = Color(0xFFE5E7EB)
-                    )
-                )
-
-                // Lista de chats
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(vertical = 8.dp)
+                        .fillMaxSize()
+                        .background(Color(0xFFF9FAFB))
+                        .padding(paddingValues)
+                        .padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
                 ) {
-                    items(chats) { chat ->
-                        ChatItem(
-                            chat = chat,
-                            onClick = { navController.navigate("chat/${chat.id}") }
-                        )
+                    Icon(
+                        imageVector = Icons.Default.Message,
+                        contentDescription = null,
+                        modifier = Modifier.size(120.dp),
+                        tint = Color(0xFF5B4DBC)
+                    )
+                    
+                    Spacer(modifier = Modifier.height(24.dp))
+                    
+                    Text(
+                        text = "¡Inicia sesión para comenzar a chatear con mentores y aprendices de todo el mundo!",
+                        fontSize = 18.sp,
+                        textAlign = TextAlign.Center,
+                        color = Color(0xFF111827),
+                        fontWeight = FontWeight.Medium
+                    )
+                    
+                    Spacer(modifier = Modifier.height(24.dp))
+                    
+                    Button(
+                        onClick = { navController.navigate("profile") },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF5B4DBC)
+                        ),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text("Iniciar sesión")
+                    }
+                }
+            } else {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color(0xFFF9FAFB))
+                        .padding(paddingValues)
+                        .padding(horizontal = 16.dp)
+                ) {
+                    // Barra de búsqueda
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
+                        placeholder = { Text("Buscar chats...") },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = "Buscar",
+                                tint = Color.Gray
+                            )
+                        },
+                        colors = TextFieldDefaults.colors(
+                            unfocusedContainerColor = Color(0xFFF5F5F5),
+                            focusedContainerColor = Color(0xFFF5F5F5),
+                            unfocusedIndicatorColor = Color.Transparent,
+                            focusedIndicatorColor = Color.Transparent
+                        ),
+                        shape = RoundedCornerShape(8.dp),
+                        singleLine = true
+                    )
+
+                    // Lista de chats
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(vertical = 8.dp)
+                    ) {
+                        items(chats) { chat ->
+                            ChatItem(
+                                chat = chat,
+                                onClick = { navController.navigate("chat/${chat.id}") }
+                            )
+                        }
                     }
                 }
             }

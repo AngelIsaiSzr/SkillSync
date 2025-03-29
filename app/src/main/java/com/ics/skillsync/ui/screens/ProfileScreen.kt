@@ -33,6 +33,12 @@ import androidx.compose.foundation.BorderStroke
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ics.skillsync.ui.viewmodel.ProfileViewModel
 import androidx.compose.foundation.border
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarDuration
+import com.ics.skillsync.ui.components.SharedNavigationDrawer
+import com.ics.skillsync.ui.components.SharedTopBar
+import com.ics.skillsync.ui.components.SharedBottomBar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,6 +49,12 @@ fun ProfileScreen(
     val uiState by viewModel.uiState.collectAsState()
     val isAuthenticated by viewModel.isAuthenticated.collectAsState()
     val currentUser by viewModel.currentUser.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Limpiar el estado de UI cuando se desmonte la pantalla
+    LaunchedEffect(Unit) {
+        viewModel.clearUiState()
+    }
 
     // Estados de validación
     var usernameError by remember { mutableStateOf<String?>(null) }
@@ -73,7 +85,6 @@ fun ProfileScreen(
     fun validateUsername(username: String): String? {
         return when {
             username.isBlank() -> "El nombre de usuario es requerido"
-            username.length < 3 -> "El nombre de usuario debe tener al menos 3 caracteres"
             else -> null
         }
     }
@@ -81,9 +92,6 @@ fun ProfileScreen(
     fun validatePassword(password: String): String? {
         return when {
             password.isBlank() -> "La contraseña es requerida"
-            password.length < 6 -> "La contraseña debe tener al menos 6 caracteres"
-            !password.any { it.isDigit() } -> "La contraseña debe contener al menos un número"
-            !password.any { it.isLetter() } -> "La contraseña debe contener al menos una letra"
             else -> null
         }
     }
@@ -113,9 +121,20 @@ fun ProfileScreen(
     }
 
     fun validateLoginForm(): Boolean {
-        usernameError = validateUsername(username)
-        passwordError = validatePassword(password)
-        return usernameError == null && passwordError == null
+        // Solo validar el campo que está vacío
+        if (username.isBlank()) {
+            usernameError = "El nombre de usuario es requerido"
+            passwordError = null
+            return false
+        }
+        if (password.isBlank()) {
+            passwordError = "La contraseña es requerida"
+            usernameError = null
+            return false
+        }
+        usernameError = null
+        passwordError = null
+        return true
     }
 
     fun validateRegistrationForm(): Boolean {
@@ -151,153 +170,27 @@ fun ProfileScreen(
         }
     }
 
-    ModalNavigationDrawer(
-        drawerState = drawerState,
-        drawerContent = {
-            ModalDrawerSheet {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(32.dp)
-                                .background(
-                                    color = Color(0xFF5B4DBC),
-                                    shape = CircleShape
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.SwapHoriz,
-                                contentDescription = "Logo",
-                                tint = Color.White,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                        Text(
-                            text = "SkillSync",
-                            style = MaterialTheme.typography.titleLarge,
-                            color = Color(0xFF5B4DBC)
-                        )
-                    }
-
-                    Divider(modifier = Modifier.padding(vertical = 8.dp))
-
-                    NavigationDrawerItem(
-                        icon = { Icon(Icons.Default.Search, contentDescription = "Buscar") },
-                        label = { Text("Buscar") },
-                        selected = false,
-                        onClick = { /* TODO */ }
-                    )
-                    
-                    NavigationDrawerItem(
-                        icon = { Icon(Icons.Default.DateRange, contentDescription = "Sesiones") },
-                        label = { Text("Sesiones") },
-                        selected = false,
-                        onClick = { navController.navigate("sessions") }
-                    )
-                    
-                    NavigationDrawerItem(
-                        icon = { Icon(Icons.Default.Settings, contentDescription = "Configuración") },
-                        label = { Text("Configuración") },
-                        selected = false,
-                        onClick = { /* TODO */ }
-                    )
-                }
-            }
-        }
+    SharedNavigationDrawer(
+        navController = navController,
+        viewModel = viewModel,
+        drawerState = drawerState
     ) {
         Scaffold(
             topBar = {
-                TopAppBar(
-                    title = {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(32.dp)
-                                    .background(
-                                        color = Color(0xFF5B4DBC),
-                                        shape = CircleShape
-                                    ),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.SwapHoriz,
-                                    contentDescription = "Logo",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                            Text(
-                                text = "SkillSync",
-                                style = MaterialTheme.typography.titleLarge,
-                                color = Color(0xFF5B4DBC)
-                            )
-                        }
-                    },
-                    actions = {
-                        IconButton(
-                            onClick = {
-                                scope.launch {
-                                    drawerState.open()
-                                }
-                            }
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Menu,
-                                contentDescription = "Menú",
-                                tint = Color(0xFF5B4DBC)
-                            )
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = Color.White,
-                        titleContentColor = Color(0xFF5B4DBC)
-                    )
+                SharedTopBar(
+                    navController = navController,
+                    viewModel = viewModel,
+                    title = "SkillSync",
+                    onDrawerOpen = {
+                        scope.launch { drawerState.open() }
+                    }
                 )
             },
             bottomBar = {
-                NavigationBar(
-                    containerColor = Color.White
-                ) {
-                    NavigationBarItem(
-                        icon = { Icon(Icons.Default.Home, "Inicio") },
-                        label = { Text("Inicio") },
-                        selected = false,
-                        onClick = { navController.navigate("home") }
-                    )
-                    NavigationBarItem(
-                        icon = { Icon(Icons.Default.Explore, "Explorar") },
-                        label = { Text("Explorar") },
-                        selected = false,
-                        onClick = { navController.navigate("explore") }
-                    )
-                    NavigationBarItem(
-                        icon = { Icon(Icons.Default.Message, "Chats") },
-                        label = { Text("Chats") },
-                        selected = false,
-                        onClick = { navController.navigate("chats") }
-                    )
-                    NavigationBarItem(
-                        icon = { Icon(Icons.Default.Person, "Perfil") },
-                        label = { Text("Perfil") },
-                        selected = true,
-                        onClick = { }
-                    )
-                }
-            }
+                SharedBottomBar(navController = navController)
+            },
+            containerColor = Color.White,
+            snackbarHost = { SnackbarHost(snackbarHostState) }
         ) { paddingValues ->
             Column(
                 modifier = Modifier
@@ -764,22 +657,18 @@ fun ProfileScreen(
                 when (val state = uiState) {
                     is ProfileViewModel.UiState.Error -> {
                         LaunchedEffect(state) {
-                            scope.launch {
-                                SnackbarHostState().showSnackbar(
-                                    message = state.message,
-                                    duration = SnackbarDuration.Short
-                                )
-                            }
+                            snackbarHostState.showSnackbar(
+                                message = state.message,
+                                duration = SnackbarDuration.Short
+                            )
                         }
                     }
                     is ProfileViewModel.UiState.Success -> {
                         LaunchedEffect(state) {
-                            scope.launch {
-                                SnackbarHostState().showSnackbar(
-                                    message = state.message,
-                                    duration = SnackbarDuration.Short
-                                )
-                            }
+                            snackbarHostState.showSnackbar(
+                                message = state.message,
+                                duration = SnackbarDuration.Short
+                            )
                         }
                     }
                     else -> {}

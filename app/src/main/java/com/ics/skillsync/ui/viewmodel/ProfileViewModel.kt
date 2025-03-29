@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 
 class ProfileViewModel(application: Application) : AndroidViewModel(application) {
     private val repository: UserRepository
@@ -25,6 +26,35 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     init {
         val database = AppDatabase.getDatabase(application)
         repository = UserRepository(database.userDao())
+        checkSession()
+    }
+
+    private fun checkSession() {
+        viewModelScope.launch {
+            try {
+                val result = repository.getCurrentUser()
+                result.fold(
+                    onSuccess = { user ->
+                        _currentUser.value = user
+                        _isAuthenticated.value = true
+                        _uiState.value = UiState.Initial
+                    },
+                    onFailure = {
+                        _currentUser.value = null
+                        _isAuthenticated.value = false
+                        _uiState.value = UiState.Initial
+                    }
+                )
+            } catch (e: Exception) {
+                _currentUser.value = null
+                _isAuthenticated.value = false
+                _uiState.value = UiState.Initial
+            }
+        }
+    }
+
+    fun clearUiState() {
+        _uiState.value = UiState.Initial
     }
 
     fun register(
@@ -41,15 +71,19 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                 val result = repository.registerUser(firstName, lastName, username, email, password, role)
                 result.fold(
                     onSuccess = { 
-                        _uiState.value = UiState.Success("Registro exitoso")
+                        _uiState.value = UiState.Loading
                         loginUser(username, password)
                     },
                     onFailure = { 
-                        _uiState.value = UiState.Error(it.message ?: "Error desconocido")
+                        _uiState.value = UiState.Error(when (it.message) {
+                            "Ya existe" -> "Esta cuenta ya existe"
+                            "El correo electrónico ya está registrado" -> "Este correo electrónico ya está registrado"
+                            else -> "Error al registrar la cuenta"
+                        })
                     }
                 )
             } catch (e: Exception) {
-                _uiState.value = UiState.Error(e.message ?: "Error desconocido")
+                _uiState.value = UiState.Error("Error al registrar la cuenta")
             }
         }
     }
@@ -63,22 +97,42 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                     onSuccess = { user ->
                         _currentUser.value = user
                         _isAuthenticated.value = true
-                        _uiState.value = UiState.Success("Inicio de sesión exitoso")
+                        _uiState.value = UiState.Success("¡Bienvenido de vuelta!")
+                        delay(2000) // Esperar 2 segundos antes de limpiar el estado
+                        clearUiState()
                     },
                     onFailure = {
-                        _uiState.value = UiState.Error(it.message ?: "Error desconocido")
+                        _currentUser.value = null
+                        _isAuthenticated.value = false
+                        _uiState.value = UiState.Error(when (it.message) {
+                            "No existe" -> "El usuario no existe"
+                            "Contraseña incorrecta" -> "Contraseña incorrecta"
+                            else -> "Error al iniciar sesión"
+                        })
                     }
                 )
             } catch (e: Exception) {
-                _uiState.value = UiState.Error(e.message ?: "Error desconocido")
+                _currentUser.value = null
+                _isAuthenticated.value = false
+                _uiState.value = UiState.Error("Error al iniciar sesión")
             }
         }
     }
 
     fun logout() {
-        _currentUser.value = null
-        _isAuthenticated.value = false
-        _uiState.value = UiState.Initial
+        viewModelScope.launch {
+            _uiState.value = UiState.Loading
+            try {
+                repository.logout()
+                _currentUser.value = null
+                _isAuthenticated.value = false
+                _uiState.value = UiState.Success("¡Hasta pronto!")
+                delay(2000) // Esperar 2 segundos antes de limpiar el estado
+                clearUiState()
+            } catch (e: Exception) {
+                _uiState.value = UiState.Error("Error al cerrar sesión")
+            }
+        }
     }
 
     sealed class UiState {

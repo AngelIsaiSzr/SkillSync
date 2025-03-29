@@ -17,4 +17,13 @@ interface UserDao {
 
     @Query("SELECT EXISTS(SELECT 1 FROM users WHERE email = :email)")
     suspend fun isEmailExists(email: String): Boolean
+
+    @Query("SELECT * FROM users WHERE id = (SELECT value FROM current_user LIMIT 1)")
+    suspend fun getCurrentUser(): User?
+
+    @Query("INSERT OR REPLACE INTO current_user (id, value) VALUES (1, :userId)")
+    suspend fun setCurrentUser(userId: Long)
+
+    @Query("DELETE FROM current_user")
+    suspend fun clearCurrentUser()
 } 

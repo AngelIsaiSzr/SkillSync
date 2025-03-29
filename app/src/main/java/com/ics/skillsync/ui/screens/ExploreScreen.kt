@@ -35,10 +35,17 @@ import androidx.compose.material3.rememberDrawerState
 import kotlinx.coroutines.launch
 import com.ics.skillsync.ui.components.SkillCard
 import com.ics.skillsync.ui.components.StepItem
+import com.ics.skillsync.ui.components.SharedNavigationDrawer
+import com.ics.skillsync.ui.components.SharedTopBar
+import com.ics.skillsync.ui.components.SharedBottomBar
+import com.ics.skillsync.ui.viewmodel.ProfileViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ExploreScreen(navController: NavController) {
+fun ExploreScreen(
+    navController: NavController,
+    viewModel: ProfileViewModel
+) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     
@@ -182,153 +189,26 @@ fun ExploreScreen(navController: NavController) {
         }
     }
 
-    ModalNavigationDrawer(
-        drawerState = drawerState,
-        drawerContent = {
-            ModalDrawerSheet {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(32.dp)
-                                .background(
-                                    color = Color(0xFF5B4DBC),
-                                    shape = CircleShape
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.SwapHoriz,
-                                contentDescription = "Logo",
-                                tint = Color.White,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                        Text(
-                            text = "SkillSync",
-                            style = MaterialTheme.typography.titleLarge,
-                            color = Color(0xFF5B4DBC)
-                        )
-                    }
-
-                    Divider(modifier = Modifier.padding(vertical = 8.dp))
-
-                    NavigationDrawerItem(
-                        icon = { Icon(Icons.Default.Search, contentDescription = "Buscar") },
-                        label = { Text("Buscar") },
-                        selected = false,
-                        onClick = { /* TODO */ }
-                    )
-                    
-                    NavigationDrawerItem(
-                        icon = { Icon(Icons.Default.DateRange, contentDescription = "Sesiones") },
-                        label = { Text("Sesiones") },
-                        selected = false,
-                        onClick = { /* TODO */ }
-                    )
-                    
-                    NavigationDrawerItem(
-                        icon = { Icon(Icons.Default.Settings, contentDescription = "Configuración") },
-                        label = { Text("Configuración") },
-                        selected = false,
-                        onClick = { /* TODO */ }
-                    )
-                }
-            }
-        }
+    SharedNavigationDrawer(
+        navController = navController,
+        viewModel = viewModel,
+        drawerState = drawerState
     ) {
         Scaffold(
             topBar = {
-                TopAppBar(
-                    title = {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(32.dp)
-                                    .background(
-                                        color = Color(0xFF5B4DBC),
-                                        shape = CircleShape
-                                    ),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.SwapHoriz,
-                                    contentDescription = "Logo",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                            Text(
-                                text = "SkillSync",
-                                style = MaterialTheme.typography.titleLarge,
-                                color = Color(0xFF5B4DBC)
-                            )
-                        }
-                    },
-                    actions = {
-                        IconButton(
-                            onClick = {
-                                scope.launch {
-                                    drawerState.open()
-                                }
-                            }
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Menu,
-                                contentDescription = "Menú",
-                                tint = Color(0xFF5B4DBC)
-                            )
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = Color.White,
-                        titleContentColor = Color(0xFF5B4DBC)
-                    )
+                SharedTopBar(
+                    navController = navController,
+                    viewModel = viewModel,
+                    title = "SkillSync",
+                    onDrawerOpen = {
+                        scope.launch { drawerState.open() }
+                    }
                 )
             },
             bottomBar = {
-                NavigationBar(
-                    containerColor = Color.White
-                ) {
-                    NavigationBarItem(
-                        icon = { Icon(Icons.Default.Home, "Inicio") },
-                        label = { Text("Inicio") },
-                        selected = false,
-                        onClick = { navController.navigate("home") }
-                    )
-                    NavigationBarItem(
-                        icon = { Icon(Icons.Default.Explore, "Explorar") },
-                        label = { Text("Explorar") },
-                        selected = true,
-                        onClick = { }
-                    )
-                    NavigationBarItem(
-                        icon = { Icon(Icons.Default.Message, "Chats") },
-                        label = { Text("Chats") },
-                        selected = false,
-                        onClick = { navController.navigate("chats") }
-                    )
-                    NavigationBarItem(
-                        icon = { Icon(Icons.Default.Person, "Perfil") },
-                        label = { Text("Perfil") },
-                        selected = false,
-                        onClick = { navController.navigate("profile") }
-                    )
-                }
-            }
+                SharedBottomBar(navController = navController)
+            },
+            containerColor = Color.White
         ) { paddingValues ->
             LazyColumn(
                 modifier = Modifier
