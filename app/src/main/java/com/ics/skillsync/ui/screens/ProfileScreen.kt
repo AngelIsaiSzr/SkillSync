@@ -122,17 +122,17 @@ fun ProfileScreen(
 
     fun validateLoginForm(): Boolean {
         // Solo validar el campo que está vacío
-        if (username.isBlank()) {
-            usernameError = "El nombre de usuario es requerido"
+        if (email.isBlank()) {
+            emailError = "El correo electrónico es requerido"
             passwordError = null
             return false
         }
         if (password.isBlank()) {
             passwordError = "La contraseña es requerida"
-            usernameError = null
+            emailError = null
             return false
         }
-        usernameError = null
+        emailError = null
         passwordError = null
         return true
     }
@@ -152,7 +152,7 @@ fun ProfileScreen(
     // Función para manejar el inicio de sesión
     fun handleLogin() {
         if (validateLoginForm()) {
-            viewModel.loginUser(username, password)
+            viewModel.loginUser(email, password)
         }
     }
 
@@ -370,15 +370,15 @@ fun ProfileScreen(
                                 if (isLoginForm) {
                                     // Formulario de inicio de sesión
                                     OutlinedTextField(
-                                        value = username,
+                                        value = email,
                                         onValueChange = { 
-                                            username = it
-                                            usernameError = null
+                                            email = it
+                                            emailError = null
                                         },
-                                        label = { Text("Nombre de usuario") },
+                                        label = { Text("Correo electrónico") },
                                         modifier = Modifier.fillMaxWidth(),
-                                        isError = usernameError != null,
-                                        supportingText = usernameError?.let { { Text(it) } },
+                                        isError = emailError != null,
+                                        supportingText = emailError?.let { { Text(it) } },
                                         colors = OutlinedTextFieldDefaults.colors(
                                             unfocusedBorderColor = Color.LightGray,
                                             focusedBorderColor = Color(0xFF5B4DBC)

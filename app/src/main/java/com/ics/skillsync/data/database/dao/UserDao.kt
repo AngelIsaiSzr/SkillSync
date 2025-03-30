@@ -1,28 +1,38 @@
 package com.ics.skillsync.data.database.dao
 
 import androidx.room.*
+import com.ics.skillsync.data.database.entity.CurrentUser
 import com.ics.skillsync.data.database.entity.User
 import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface UserDao {
-    @Insert(onConflict = OnConflictStrategy.ABORT)
-    suspend fun insertUser(user: User): Long
+    @Query("SELECT * FROM users WHERE id = :userId")
+    suspend fun getUserById(userId: String): User?
 
-    @Query("SELECT * FROM users WHERE username = :username AND password = :password LIMIT 1")
-    suspend fun getUser(username: String, password: String): User?
+    @Query("SELECT * FROM users WHERE username = :username")
+    suspend fun getUserByUsername(username: String): User?
 
-    @Query("SELECT EXISTS(SELECT 1 FROM users WHERE username = :username)")
-    suspend fun isUsernameExists(username: String): Boolean
+    @Query("SELECT * FROM users WHERE email = :email")
+    suspend fun getUserByEmail(email: String): User?
 
-    @Query("SELECT EXISTS(SELECT 1 FROM users WHERE email = :email)")
-    suspend fun isEmailExists(email: String): Boolean
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertUser(user: User)
 
-    @Query("SELECT * FROM users WHERE id = (SELECT value FROM current_user LIMIT 1)")
-    suspend fun getCurrentUser(): User?
+    @Query("SELECT * FROM users")
+    fun getAllUsers(): Flow<List<User>>
 
-    @Query("INSERT OR REPLACE INTO current_user (id, value) VALUES (1, :userId)")
-    suspend fun setCurrentUser(userId: Long)
+    @Query("DELETE FROM users")
+    suspend fun deleteAllUsers()
+
+    @Query("DELETE FROM users WHERE id = :userId")
+    suspend fun deleteUser(userId: String)
+
+    @Query("SELECT * FROM current_user LIMIT 1")
+    suspend fun getCurrentUser(): CurrentUser?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun setCurrentUser(currentUser: CurrentUser)
 
     @Query("DELETE FROM current_user")
     suspend fun clearCurrentUser()

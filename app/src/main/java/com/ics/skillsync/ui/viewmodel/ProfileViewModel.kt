@@ -23,6 +23,9 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     private val _currentUser = MutableStateFlow<User?>(null)
     val currentUser: StateFlow<User?> = _currentUser.asStateFlow()
 
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+
     init {
         val database = AppDatabase.getDatabase(application)
         repository = UserRepository(database.userDao())
@@ -66,33 +69,33 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
         role: String
     ) {
         viewModelScope.launch {
+            _isLoading.value = true
             _uiState.value = UiState.Loading
             try {
                 val result = repository.registerUser(firstName, lastName, username, email, password, role)
                 result.fold(
                     onSuccess = { 
                         _uiState.value = UiState.Loading
-                        loginUser(username, password)
+                        loginUser(email, password)
                     },
                     onFailure = { 
-                        _uiState.value = UiState.Error(when (it.message) {
-                            "Ya existe" -> "Esta cuenta ya existe"
-                            "El correo electrónico ya está registrado" -> "Este correo electrónico ya está registrado"
-                            else -> "Error al registrar la cuenta"
-                        })
+                        _uiState.value = UiState.Error(it.message ?: "Error al registrar la cuenta")
                     }
                 )
             } catch (e: Exception) {
-                _uiState.value = UiState.Error("Error al registrar la cuenta")
+                _uiState.value = UiState.Error(e.message ?: "Error al registrar la cuenta")
+            } finally {
+                _isLoading.value = false
             }
         }
     }
 
-    fun loginUser(username: String, password: String) {
+    fun loginUser(email: String, password: String) {
         viewModelScope.launch {
+            _isLoading.value = true
             _uiState.value = UiState.Loading
             try {
-                val result = repository.loginUser(username, password)
+                val result = repository.loginUser(email, password)
                 result.fold(
                     onSuccess = { user ->
                         _currentUser.value = user
@@ -104,33 +107,34 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                     onFailure = {
                         _currentUser.value = null
                         _isAuthenticated.value = false
-                        _uiState.value = UiState.Error(when (it.message) {
-                            "No existe" -> "El usuario no existe"
-                            "Contraseña incorrecta" -> "Contraseña incorrecta"
-                            else -> "Error al iniciar sesión"
-                        })
+                        _uiState.value = UiState.Error(it.message ?: "Error al iniciar sesión")
                     }
                 )
             } catch (e: Exception) {
                 _currentUser.value = null
                 _isAuthenticated.value = false
-                _uiState.value = UiState.Error("Error al iniciar sesión")
+                _uiState.value = UiState.Error(e.message ?: "Error al iniciar sesión")
+            } finally {
+                _isLoading.value = false
             }
         }
     }
 
     fun logout() {
         viewModelScope.launch {
+            _isLoading.value = true
             _uiState.value = UiState.Loading
             try {
                 repository.logout()
                 _currentUser.value = null
                 _isAuthenticated.value = false
-                _uiState.value = UiState.Success("¡Hasta pronto!")
+                _uiState.value = UiState.Success("Sesión cerrada correctamente")
                 delay(2000) // Esperar 2 segundos antes de limpiar el estado
                 clearUiState()
             } catch (e: Exception) {
-                _uiState.value = UiState.Error("Error al cerrar sesión")
+                _uiState.value = UiState.Error(e.message ?: "Error al cerrar sesión")
+            } finally {
+                _isLoading.value = false
             }
         }
     }
