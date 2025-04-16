@@ -74,9 +74,9 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
             try {
                 val result = repository.registerUser(firstName, lastName, username, email, password, role)
                 result.fold(
-                    onSuccess = { 
+                    onSuccess = {
                         _uiState.value = UiState.Loading
-                        loginUser(email, password)
+                        loginUser(email, password, isFirstLogin = true)
                     },
                     onFailure = { 
                         _uiState.value = UiState.Error(it.message ?: "Error al registrar la cuenta")
@@ -90,7 +90,7 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    fun loginUser(email: String, password: String) {
+    fun loginUser(email: String, password: String, isFirstLogin: Boolean = false) {
         viewModelScope.launch {
             _isLoading.value = true
             _uiState.value = UiState.Loading
@@ -100,7 +100,11 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                     onSuccess = { user ->
                         _currentUser.value = user
                         _isAuthenticated.value = true
-                        _uiState.value = UiState.Success("¡Bienvenido de vuelta!")
+                        _uiState.value = if (isFirstLogin) {
+                            UiState.Success("¡Bienvenido a SkillSync!")
+                        } else {
+                            UiState.Success("¡Bienvenido de vuelta!")
+                        }
                         delay(2000) // Esperar 2 segundos antes de limpiar el estado
                         clearUiState()
                     },
@@ -128,7 +132,7 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                 repository.logout()
                 _currentUser.value = null
                 _isAuthenticated.value = false
-                _uiState.value = UiState.Success("Sesión cerrada correctamente")
+                _uiState.value = UiState.Success("¡Hasta pronto!")
                 delay(2000) // Esperar 2 segundos antes de limpiar el estado
                 clearUiState()
             } catch (e: Exception) {
