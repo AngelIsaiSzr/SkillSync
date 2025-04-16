@@ -140,7 +140,7 @@ fun SplashScreen(navController: NavController) {
                     fontWeight = FontWeight.Medium
                 )
                 Text(
-                    text = "Equipo 4",
+                    text = "Angel Salazar",
                     color = Color(0xFF5B4DBC),
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Medium
