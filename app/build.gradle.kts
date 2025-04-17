@@ -32,12 +32,28 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+        encoding = "UTF-8"
     }
     kotlinOptions {
         jvmTarget = "11"
     }
     buildFeatures {
         compose = true
+    }
+
+    kapt {
+        correctErrorTypes = true
+        useBuildCache = true
+        javacOptions {
+            option("-Xmaxerrs", 1000)
+        }
+    }
+
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += "META-INF/gradle/incremental.annotation.processors"
+        }
     }
 }
 

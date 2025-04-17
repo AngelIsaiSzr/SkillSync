@@ -1,6 +1,7 @@
 package com.ics.skillsync.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -20,6 +21,8 @@ import com.ics.skillsync.ui.viewmodel.ProfileViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlin.system.exitProcess
+import coil.compose.AsyncImage
+import androidx.compose.ui.layout.ContentScale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -100,16 +103,45 @@ fun SharedDrawerContent(
                     modifier = Modifier
                         .size(80.dp)
                         .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.2f)),
+                        .background(Color.White)
+                        .border(2.dp, Color.White, CircleShape)
+                        .padding(2.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Person,
-                        contentDescription = "Perfil",
-                        tint = Color.White,
-                        modifier = Modifier.size(40.dp)
-                    )
+                    when {
+                        currentUser?.photoUrl.isNullOrEmpty() -> {
+                            Icon(
+                                imageVector = Icons.Default.Person,
+                                contentDescription = "Foto de perfil por defecto",
+                                modifier = Modifier.size(40.dp),
+                                tint = Color(0xFF5B4DBC)
+                            )
+                        }
+                        else -> {
+                            var isError by remember { mutableStateOf(false) }
+                            
+                            if (isError) {
+                                Icon(
+                                    imageVector = Icons.Default.Person,
+                                    contentDescription = "Error al cargar la foto",
+                                    modifier = Modifier.size(40.dp),
+                                    tint = Color(0xFF5B4DBC)
+                                )
+                            } else {
+                                AsyncImage(
+                                    model = currentUser?.photoUrl,
+                                    contentDescription = "Foto de perfil",
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .clip(CircleShape),
+                                    contentScale = ContentScale.Crop,
+                                    onError = { isError = true }
+                                )
+                            }
+                        }
+                    }
                 }
+
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
                     text = if (isAuthenticated) currentUser?.username ?: "Usuario" else "Anónimo",

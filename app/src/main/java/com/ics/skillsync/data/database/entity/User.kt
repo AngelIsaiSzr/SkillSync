@@ -12,7 +12,8 @@ data class User(
     val username: String,
     val email: String,
     val password: String,
-    val role: String
+    val role: String,
+    val photoUrl: String = ""
 ) {
     // Constructor sin argumentos requerido por Firestore
     constructor() : this(
@@ -22,6 +23,7 @@ data class User(
         username = "",
         email = "",
         password = "",
-        role = ""
+        role = "",
+        photoUrl = ""
     )
 } 

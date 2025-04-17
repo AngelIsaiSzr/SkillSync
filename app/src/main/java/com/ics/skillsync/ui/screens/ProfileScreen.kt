@@ -16,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -39,6 +40,8 @@ import androidx.compose.material3.SnackbarDuration
 import com.ics.skillsync.ui.components.SharedNavigationDrawer
 import com.ics.skillsync.ui.components.SharedTopBar
 import com.ics.skillsync.ui.components.SharedBottomBar
+import kotlinx.coroutines.delay
+import androidx.compose.animation.core.tween
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -50,10 +53,29 @@ fun ProfileScreen(
     val isAuthenticated by viewModel.isAuthenticated.collectAsState()
     val currentUser by viewModel.currentUser.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    val scrollState = rememberScrollState()
+    val scope = rememberCoroutineScope()
+    
+    // Estado para el diálogo de restablecimiento de contraseña
+    var showResetPasswordDialog by remember { mutableStateOf(false) }
+    var resetEmail by remember { mutableStateOf("") }
+    var resetEmailError by remember { mutableStateOf<String?>(null) }
 
-    // Limpiar el estado de UI cuando se desmonte la pantalla
+    // Efecto para cargar la foto al montar el componente
     LaunchedEffect(Unit) {
         viewModel.clearUiState()
+        // Forzar una recarga del usuario actual
+        viewModel.checkSession()
+    }
+
+    // Efecto para manejar la autenticación
+    LaunchedEffect(isAuthenticated) {
+        if (isAuthenticated) {
+            delay(300)
+            scope.launch {
+                scrollState.animateScrollTo(0, animationSpec = tween(500))
+            }
+        }
     }
 
     // Estados de validación
@@ -69,7 +91,6 @@ fun ProfileScreen(
     var confirmPasswordVisible by remember { mutableStateOf(false) }
 
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
-    val scope = rememberCoroutineScope()
     var isLoginForm by remember { mutableStateOf(true) }
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -197,7 +218,7 @@ fun ProfileScreen(
                     .fillMaxSize()
                     .background(Color.White)
                     .padding(paddingValues)
-                    .verticalScroll(rememberScrollState()),
+                    .verticalScroll(scrollState),
                 horizontalAlignment = Alignment.Start
             ) {
                 if (!isAuthenticated) {
@@ -271,7 +292,25 @@ fun ProfileScreen(
                             .height(200.dp)
                             .padding(horizontal = 16.dp)
                             .clip(RoundedCornerShape(16.dp)),
-                        contentScale = ContentScale.Crop
+                        contentScale = ContentScale.Crop,
+                        onLoading = {
+                            @Composable {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(24.dp),
+                                    color = Color(0xFF5B4DBC)
+                                )
+                            }
+                        },
+                        onError = {
+                            @Composable {
+                                Icon(
+                                    imageVector = Icons.Default.Person,
+                                    contentDescription = "Error al cargar la foto",
+                                    modifier = Modifier.size(60.dp),
+                                    tint = Color(0xFF5B4DBC)
+                                )
+                            }
+                        }
                     )
 
                     Spacer(modifier = Modifier.height(24.dp))
@@ -410,6 +449,22 @@ fun ProfileScreen(
                                             focusedBorderColor = Color(0xFF5B4DBC)
                                         )
                                     )
+
+                                    Box(
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        TextButton(
+                                            onClick = { showResetPasswordDialog = true },
+                                            modifier = Modifier
+                                                .align(Alignment.CenterEnd)
+                                        ) {
+                                            Text(
+                                                text = "¿Olvidaste tu contraseña?",
+                                                color = Color(0xFF5B4DBC),
+                                                fontSize = 14.sp
+                                            )
+                                        }
+                                    }
 
                                     Button(
                                         onClick = { handleLogin() },
@@ -637,18 +692,200 @@ fun ProfileScreen(
                             .padding(16.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text(
-                            text = "En construcción",
-                            style = MaterialTheme.typography.headlineMedium
-                        )
-                        
-                        Spacer(modifier = Modifier.height(16.dp))
-                        
-                        Button(
-                            onClick = { viewModel.logout() },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF5B4DBC))
+                        // Foto de perfil
+                        Box(
+                            modifier = Modifier
+                                .size(120.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFFF3F4F6))
+                                .border(2.dp, Color(0xFF5B4DBC), CircleShape),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Text("Cerrar sesión")
+                            when {
+                                currentUser?.photoUrl.isNullOrEmpty() -> {
+                                    // Mostrar ícono por defecto cuando no hay foto
+                                    Icon(
+                                        imageVector = Icons.Default.Person,
+                                        contentDescription = "Foto de perfil por defecto",
+                                        modifier = Modifier.size(60.dp),
+                                        tint = Color(0xFF5B4DBC)
+                                    )
+                                }
+                                else -> {
+                                    AsyncImage(
+                                        model = currentUser?.photoUrl,
+                                        contentDescription = "Foto de perfil",
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentScale = ContentScale.Crop,
+                                        onLoading = {
+                                            @Composable {
+                                                CircularProgressIndicator(
+                                                    modifier = Modifier.size(24.dp),
+                                                    color = Color(0xFF5B4DBC)
+                                                )
+                                            }
+                                        },
+                                        onError = {
+                                            @Composable {
+                                                Icon(
+                                                    imageVector = Icons.Default.Person,
+                                                    contentDescription = "Error al cargar la foto",
+                                                    modifier = Modifier.size(60.dp),
+                                                    tint = Color(0xFF5B4DBC)
+                                                )
+                                            }
+                                        }
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Nombre y rol del usuario
+                        currentUser?.let { user ->
+                            Text(
+                                text = "${user.firstName} ${user.lastName}",
+                                style = MaterialTheme.typography.headlineMedium,
+                                color = Color(0xFF111827),
+                                textAlign = TextAlign.Center
+                            )
+
+                            Text(
+                                text = user.role ?: "Miembro",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = Color(0xFF6B7280),
+                                modifier = Modifier.padding(top = 4.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        // Tarjeta de información personal
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth(),
+                            colors = CardDefaults.cardColors(containerColor = Color.White),
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(1.dp, Color(0xFFE5E7EB))
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp)
+                            ) {
+                                Text(
+                                    text = "Información Personal",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = Color(0xFF111827),
+                                    fontWeight = FontWeight.Bold
+                                )
+
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                // Campos de información
+                                currentUser?.let { user ->
+                                    InfoField(
+                                        icon = Icons.Default.Email,
+                                        label = "Correo electrónico",
+                                        value = user.email
+                                    )
+
+                                    Spacer(modifier = Modifier.height(12.dp))
+
+                                    InfoField(
+                                        icon = Icons.Default.Person,
+                                        label = "Nombre de usuario",
+                                        value = user.username
+                                    )
+
+                                    Spacer(modifier = Modifier.height(12.dp))
+
+                                    InfoField(
+                                        icon = Icons.Default.School,
+                                        label = "Rol",
+                                        value = user.role ?: "No especificado"
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        // Tarjeta de estadísticas
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth(),
+                            colors = CardDefaults.cardColors(containerColor = Color.White),
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(1.dp, Color(0xFFE5E7EB))
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                horizontalArrangement = Arrangement.SpaceEvenly
+                            ) {
+                                StatisticItem(
+                                    icon = Icons.Default.Star,
+                                    value = "0.0",
+                                    label = "Calificación"
+                                )
+                                StatisticItem(
+                                    icon = Icons.Default.Groups,
+                                    value = "0",
+                                    label = "Sesiones"
+                                )
+                                StatisticItem(
+                                    icon = Icons.Default.WorkspacePremium,
+                                    value = "0",
+                                    label = "Habilidades"
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        // Botones de acción
+                        Button(
+                            onClick = { navController.navigate("edit_profile") },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFF5B4DBC)
+                            ),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Editar Perfil")
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        OutlinedButton(
+                            onClick = { viewModel.logout() },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = Color(0xFF5B4DBC)
+                            ),
+                            border = BorderStroke(1.dp, Color(0xFF5B4DBC)),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Logout,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Cerrar Sesión")
                         }
                     }
                 }
@@ -669,9 +906,84 @@ fun ProfileScreen(
                                 message = state.message,
                                 duration = SnackbarDuration.Short
                             )
+                            // Scroll al inicio después del login exitoso
+                            scope.launch {
+                                delay(500) // Esperar a que se muestre el snackbar
+                                scrollState.animateScrollTo(0, animationSpec = tween(500))
+                                navController.navigate("profile") {
+                                    popUpTo("profile") { inclusive = true }
+                                }
+                            }
                         }
                     }
                     else -> {}
+                }
+
+                // Diálogo de restablecimiento de contraseña
+                if (showResetPasswordDialog) {
+                    AlertDialog(
+                        onDismissRequest = { 
+                            showResetPasswordDialog = false
+                            resetEmail = ""
+                            resetEmailError = null
+                        },
+                        title = { Text("Restablecer contraseña") },
+                        text = {
+                            Column {
+                                Text(
+                                    "Ingresa tu correo electrónico y te enviaremos las instrucciones para restablecer tu contraseña.",
+                                    modifier = Modifier.padding(bottom = 16.dp)
+                                )
+                                OutlinedTextField(
+                                    value = resetEmail,
+                                    onValueChange = { 
+                                        resetEmail = it
+                                        resetEmailError = null
+                                    },
+                                    label = { Text("Correo electrónico") },
+                                    isError = resetEmailError != null,
+                                    supportingText = resetEmailError?.let { { Text(it) } },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        unfocusedBorderColor = Color.LightGray,
+                                        focusedBorderColor = Color(0xFF5B4DBC)
+                                    )
+                                )
+                            }
+                        },
+                        confirmButton = {
+                            Button(
+                                onClick = {
+                                    if (resetEmail.isBlank()) {
+                                        resetEmailError = "El correo electrónico es requerido"
+                                    } else if (!android.util.Patterns.EMAIL_ADDRESS.matcher(resetEmail).matches()) {
+                                        resetEmailError = "El correo electrónico no es válido"
+                                    } else {
+                                        viewModel.resetPassword(resetEmail)
+                                        showResetPasswordDialog = false
+                                        resetEmail = ""
+                                    }
+                                },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color(0xFF5B4DBC)
+                                )
+                            ) {
+                                Text("Enviar")
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(
+                                onClick = { 
+                                    showResetPasswordDialog = false
+                                    resetEmail = ""
+                                    resetEmailError = null
+                                }
+                            ) {
+                                Text("Cancelar")
+                            }
+                        }
+                    )
                 }
             }
         }
@@ -721,5 +1033,67 @@ fun TabButton(
                 color = if (selected) Color(0xFF5B4DBC) else Color.Gray
             )
         }
+    }
+}
+
+@Composable
+private fun InfoField(
+    icon: ImageVector,
+    label: String,
+    value: String
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = Color(0xFF5B4DBC),
+            modifier = Modifier.size(24.dp)
+        )
+        Spacer(modifier = Modifier.width(12.dp))
+        Column {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodySmall,
+                color = Color(0xFF6B7280)
+            )
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodyLarge,
+                color = Color(0xFF111827)
+            )
+        }
+    }
+}
+
+@Composable
+private fun StatisticItem(
+    icon: ImageVector,
+    value: String,
+    label: String
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = Color(0xFF5B4DBC),
+            modifier = Modifier.size(24.dp)
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = value,
+            style = MaterialTheme.typography.titleLarge,
+            color = Color(0xFF111827),
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = Color(0xFF6B7280)
+        )
     }
 } 

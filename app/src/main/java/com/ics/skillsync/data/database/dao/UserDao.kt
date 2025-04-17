@@ -36,4 +36,13 @@ interface UserDao {
 
     @Query("DELETE FROM current_user")
     suspend fun clearCurrentUser()
+
+    @Update
+    suspend fun updateUser(user: User)
+
+    @Delete
+    suspend fun deleteUser(user: User)
+
+    @Query("UPDATE users SET photoUrl = :photoUrl WHERE id = :userId")
+    suspend fun updateUserPhoto(userId: String, photoUrl: String)
 } 

@@ -35,6 +35,9 @@ fun Navigation(
         composable("profile") {
             ProfileScreen(navController = navController, viewModel = viewModel)
         }
+        composable("edit_profile") {
+            EditProfileScreen(navController = navController, viewModel = viewModel)
+        }
         composable("search") {
             SearchScreen(navController = navController)
         }

@@ -8,11 +8,13 @@ import com.ics.skillsync.data.database.entity.CurrentUser
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
+import android.app.Application
 
 class UserRepository(
     private val userDao: UserDao,
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
-    private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
+    private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance(),
+    private val application: Application
 ) {
     
     suspend fun registerUser(
@@ -172,6 +174,44 @@ class UserRepository(
             // Limpiar datos locales
             userDao.clearCurrentUser()
             
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun updateUserPhoto(userId: String, photoUrl: String): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            // Actualizar en Firestore
+            firestore.collection("users").document(userId)
+                .update("photoUrl", photoUrl)
+                .await()
+
+            // Actualizar en Room
+            userDao.updateUserPhoto(userId, photoUrl)
+            
+            // Guardar la foto en SharedPreferences para persistencia
+            application.getSharedPreferences("user_prefs", android.content.Context.MODE_PRIVATE)
+                .edit()
+                .putString("profile_photo", photoUrl)
+                .apply()
+
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun updateUser(user: User): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            // Actualizar en Firestore
+            firestore.collection("users").document(user.id)
+                .set(user)
+                .await()
+
+            // Actualizar en Room
+            userDao.updateUser(user)
+
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
