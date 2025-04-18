@@ -45,4 +45,7 @@ interface UserDao {
 
     @Query("UPDATE users SET photoUrl = :photoUrl WHERE id = :userId")
     suspend fun updateUserPhoto(userId: String, photoUrl: String)
+
+    @Query("UPDATE users SET verificationLevel = :level WHERE id = :userId")
+    suspend fun updateUserVerificationLevel(userId: String, level: Int)
 } 

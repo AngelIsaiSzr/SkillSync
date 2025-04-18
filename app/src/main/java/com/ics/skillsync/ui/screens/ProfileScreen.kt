@@ -55,6 +55,9 @@ fun ProfileScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val scrollState = rememberScrollState()
     val scope = rememberCoroutineScope()
+    val verificationState by viewModel.verificationState.collectAsState()
+    var showImagePicker by remember { mutableStateOf(false) }
+    var showVerificationDialog by remember { mutableStateOf(false) }
     
     // Estado para el diálogo de restablecimiento de contraseña
     var showResetPasswordDialog by remember { mutableStateOf(false) }
@@ -76,6 +79,11 @@ fun ProfileScreen(
                 scrollState.animateScrollTo(0, animationSpec = tween(500))
             }
         }
+    }
+
+    // Efecto para cargar el estado de verificación
+    LaunchedEffect(Unit) {
+        viewModel.checkVerificationStatus()
     }
 
     // Estados de validación
@@ -712,29 +720,23 @@ fun ProfileScreen(
                                     )
                                 }
                                 else -> {
+                                    var isLoading by remember { mutableStateOf(true) }
+                                    
+                                    if (isLoading) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(24.dp),
+                                            color = Color(0xFF5B4DBC)
+                                        )
+                                    }
+                                    
                                     AsyncImage(
                                         model = currentUser?.photoUrl,
                                         contentDescription = "Foto de perfil",
                                         modifier = Modifier.fillMaxSize(),
                                         contentScale = ContentScale.Crop,
-                                        onLoading = {
-                                            @Composable {
-                                                CircularProgressIndicator(
-                                                    modifier = Modifier.size(24.dp),
-                                                    color = Color(0xFF5B4DBC)
-                                                )
-                                            }
-                                        },
-                                        onError = {
-                                            @Composable {
-                                                Icon(
-                                                    imageVector = Icons.Default.Person,
-                                                    contentDescription = "Error al cargar la foto",
-                                                    modifier = Modifier.size(60.dp),
-                                                    tint = Color(0xFF5B4DBC)
-                                                )
-                                            }
-                                        }
+                                        onLoading = { isLoading = true },
+                                        onSuccess = { isLoading = false },
+                                        onError = { isLoading = false }
                                     )
                                 }
                             }
@@ -757,6 +759,61 @@ fun ProfileScreen(
                                 color = Color(0xFF6B7280),
                                 modifier = Modifier.padding(top = 4.dp)
                             )
+                        }
+
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        // Estado de verificación
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Surface(
+                                modifier = Modifier
+                                    .border(
+                                        width = 1.dp,
+                                        color = when (verificationState) {
+                                            is ProfileViewModel.VerificationState.Verified -> Color(0xFF2E7D32)
+                                            else -> Color(0xFF757575)
+                                        },
+                                        shape = RoundedCornerShape(16.dp)
+                                    )
+                                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                                color = Color.Transparent
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    Icon(
+                                        imageVector = when (verificationState) {
+                                            is ProfileViewModel.VerificationState.Verified -> Icons.Default.Verified
+                                            else -> Icons.Default.Close
+                                        },
+                                        contentDescription = "Estado de verificación",
+                                        tint = when (verificationState) {
+                                            is ProfileViewModel.VerificationState.Verified -> Color(0xFF2E7D32)
+                                            else -> Color(0xFF757575)
+                                        }
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = when (verificationState) {
+                                            is ProfileViewModel.VerificationState.Verified -> 
+                                                "Verificado: Nivel ${(verificationState as ProfileViewModel.VerificationState.Verified).level}"
+                                            else -> "No verificado"
+                                        },
+                                        color = when (verificationState) {
+                                            is ProfileViewModel.VerificationState.Verified -> Color(0xFF2E7D32)
+                                            else -> Color(0xFF757575)
+                                        },
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
+                            }
                         }
 
                         Spacer(modifier = Modifier.height(24.dp))
@@ -847,6 +904,54 @@ fun ProfileScreen(
                         Spacer(modifier = Modifier.height(24.dp))
 
                         // Botones de acción
+                        if (verificationState !is ProfileViewModel.VerificationState.Verified || 
+                            (verificationState as ProfileViewModel.VerificationState.Verified).level < 3) {
+                            Button(
+                                onClick = {
+                                    when (verificationState) {
+                                        is ProfileViewModel.VerificationState.Verified -> {
+                                            val level = (verificationState as ProfileViewModel.VerificationState.Verified).level
+                                            when (level) {
+                                                1 -> showImagePicker = true
+                                                2 -> showVerificationDialog = true
+                                                else -> viewModel.verifyEmail()
+                                            }
+                                        }
+                                        else -> viewModel.verifyEmail()
+                                    }
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(48.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color(0xFF5B4DBC)
+                                ),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Verified,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = when (verificationState) {
+                                        is ProfileViewModel.VerificationState.Verified -> {
+                                            val level = (verificationState as ProfileViewModel.VerificationState.Verified).level
+                                            when (level) {
+                                                1 -> "Subir imagen de verificación"
+                                                2 -> "Tomar examen de verificación"
+                                                else -> "Verificar correo electrónico"
+                                            }
+                                        }
+                                        else -> "Verificar correo electrónico"
+                                    }
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(12.dp))
+                        }
+
                         Button(
                             onClick = { navController.navigate("edit_profile") },
                             modifier = Modifier
@@ -980,6 +1085,30 @@ fun ProfileScreen(
                                     resetEmailError = null
                                 }
                             ) {
+                                Text("Cancelar")
+                            }
+                        }
+                    )
+                }
+
+                // Diálogo de verificación
+                if (showVerificationDialog) {
+                    AlertDialog(
+                        onDismissRequest = { showVerificationDialog = false },
+                        title = { Text("Examen de verificación") },
+                        text = { Text("¿Estás listo para tomar el examen de verificación?") },
+                        confirmButton = {
+                            TextButton(
+                                onClick = {
+                                    showVerificationDialog = false
+                                    viewModel.completeVerificationExam()
+                                }
+                            ) {
+                                Text("Comenzar")
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { showVerificationDialog = false }) {
                                 Text("Cancelar")
                             }
                         }

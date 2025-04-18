@@ -104,6 +104,7 @@ fun EditProfileScreen(
 
     val uiState by viewModel.uiState.collectAsState()
     val currentUser by viewModel.currentUser.collectAsState()
+    val temporaryPhotoUrl by viewModel.temporaryPhotoUrl.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -182,7 +183,7 @@ fun EditProfileScreen(
         if (validateForm()) {
             // Si hay una nueva foto seleccionada o se eliminó la foto, actualizar la foto primero
             if (selectedImageUri != null || isPhotoDeleted) {
-                viewModel.updateProfilePhoto(if (isPhotoDeleted) "" else selectedImageUri.toString())
+                viewModel.saveProfilePhoto(if (isPhotoDeleted) "" else selectedImageUri.toString())
             }
             
             viewModel.updateProfile(
@@ -216,6 +217,7 @@ fun EditProfileScreen(
     fun deleteProfilePhoto() {
         isPhotoDeleted = true
         selectedImageUri = null
+        viewModel.updateProfilePhoto("")
         showDeleteConfirmation = false
     }
 
@@ -223,13 +225,6 @@ fun EditProfileScreen(
     LaunchedEffect(Unit) {
         viewModel.clearUiState()
         viewModel.checkSession()
-    }
-
-    // Efecto para manejar la actualización de la foto
-    LaunchedEffect(selectedImageUri) {
-        selectedImageUri?.let { uri ->
-            viewModel.updateProfilePhoto(uri.toString())
-        }
     }
 
     // Mantener el estado del formulario cuando se vuelve de la galería
@@ -263,7 +258,7 @@ fun EditProfileScreen(
                 SharedTopBar(
                     navController = navController,
                     viewModel = viewModel,
-                    title = "Editar Perfil",
+                    title = "SkillSync",
                     onDrawerOpen = {
                         scope.launch { drawerState.open() }
                     }
@@ -303,9 +298,9 @@ fun EditProfileScreen(
                                 tint = Color(0xFF5B4DBC)
                             )
                         }
-                        selectedImageUri != null -> {
+                        temporaryPhotoUrl != null -> {
                             AsyncImage(
-                                model = selectedImageUri,
+                                model = temporaryPhotoUrl,
                                 contentDescription = "Foto de perfil seleccionada",
                                 modifier = Modifier.fillMaxSize(),
                                 contentScale = ContentScale.Crop
@@ -493,7 +488,11 @@ fun EditProfileScreen(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 OutlinedButton(
-                    onClick = { navController.navigateUp() },
+                    onClick = { 
+                        // Limpiar la foto temporal antes de cancelar
+                        viewModel.updateProfilePhoto("")
+                        navController.navigateUp() 
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp)

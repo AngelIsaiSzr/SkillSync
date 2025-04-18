@@ -39,45 +39,43 @@ class UserRepository(
                 return@withContext Result.failure(Exception("El correo electrónico no es válido"))
             }
 
-            // Primero intentar registrar en Firebase Auth
-            val authResult = auth.createUserWithEmailAndPassword(email, password).await()
-            if (authResult.user == null) {
-                return@withContext Result.failure(Exception("Error al crear la cuenta"))
+            try {
+                // Primero intentar registrar en Firebase Auth
+                val authResult = auth.createUserWithEmailAndPassword(email, password).await()
+                val userId = authResult.user?.uid ?: throw Exception("Error al crear la cuenta")
+
+                // Crear el objeto de usuario
+                val user = User(
+                    id = userId,
+                    firstName = firstName,
+                    lastName = lastName,
+                    username = username,
+                    email = email,
+                    password = password,
+                    role = role
+                )
+
+                // Guardar en Firestore
+                firestore.collection("users").document(userId).set(user).await()
+
+                // Guardar en Room para acceso local
+                userDao.insertUser(user)
+                userDao.setCurrentUser(CurrentUser(value = user.id))
+
+                Result.success(userId)
+            } catch (e: com.google.firebase.auth.FirebaseAuthWeakPasswordException) {
+                Result.failure(Exception("La contraseña es muy débil"))
+            } catch (e: com.google.firebase.auth.FirebaseAuthInvalidCredentialsException) {
+                Result.failure(Exception("El correo electrónico no es válido"))
+            } catch (e: com.google.firebase.auth.FirebaseAuthUserCollisionException) {
+                Result.failure(Exception("Ya existe una cuenta con este correo electrónico"))
+            } catch (e: com.google.firebase.FirebaseNetworkException) {
+                Result.failure(Exception("Error de conexión. Verifica tu conexión a internet"))
+            } catch (e: com.google.firebase.auth.FirebaseAuthException) {
+                Result.failure(Exception("Error al registrarte. Por favor, intenta de nuevo"))
             }
-
-            val userId = authResult.user?.uid ?: throw Exception("Error al obtener ID de usuario")
-
-            // Crear el objeto de usuario
-            val user = User(
-                id = userId,
-                firstName = firstName,
-                lastName = lastName,
-                username = username,
-                email = email,
-                password = password,
-                role = role
-            )
-
-            // Guardar en Firestore
-            firestore.collection("users").document(userId).set(user).await()
-
-            // Guardar en Room para acceso local
-            userDao.insertUser(user)
-            userDao.setCurrentUser(CurrentUser(value = user.id))
-
-            Result.success(userId)
         } catch (e: Exception) {
-            println("Error de registro: ${e.message}")
-            val errorMessage = when {
-                e.message?.contains("The email address is already in use by another account") == true -> "Este correo electrónico ya está registrado"
-                e.message?.contains("The email address is badly formatted") == true -> "El correo electrónico no es válido"
-                e.message?.contains("The password should be at least 6 characters") == true -> "La contraseña debe tener al menos 6 caracteres"
-                e.message?.contains("A network error has occurred") == true -> "Error de conexión. Verifica tu conexión a internet"
-                e.message?.contains("Operation not allowed") == true -> "El registro está temporalmente deshabilitado"
-                e.message?.contains("Todos los campos son obligatorios") == true -> "Todos los campos son obligatorios"
-                else -> "Error al registrar la cuenta. Por favor, intenta de nuevo"
-            }
-            Result.failure(Exception(errorMessage))
+            Result.failure(Exception("Error al registrarte. Por favor, intenta de nuevo"))
         }
     }
 
@@ -92,46 +90,50 @@ class UserRepository(
                 return@withContext Result.failure(Exception("El correo electrónico no es válido"))
             }
 
-            // Iniciar sesión en Firebase Auth
-            val authResult = auth.signInWithEmailAndPassword(email, password).await()
-            if (authResult.user == null) {
-                return@withContext Result.failure(Exception("Credenciales incorrectas"))
-            }
+            try {
+                // Iniciar sesión en Firebase Auth
+                val authResult = auth.signInWithEmailAndPassword(email, password).await()
+                val firebaseUser = authResult.user ?: throw Exception("Error al iniciar sesión")
 
-            val userId = authResult.user?.uid ?: throw Exception("Error al obtener ID de usuario")
-            
-            // Obtener datos del usuario de Firestore
-            val userDoc = firestore.collection("users").document(userId).get().await()
-            if (!userDoc.exists()) {
-                return@withContext Result.failure(Exception("No se encontraron los datos del usuario"))
-            }
-            
-            val user = userDoc.toObject(User::class.java)
-            if (user == null) {
-                return@withContext Result.failure(Exception("Error al cargar los datos del usuario"))
-            }
+                // Obtener datos del usuario de Firestore
+                val userDoc = firestore.collection("users")
+                    .document(firebaseUser.uid)
+                    .get()
+                    .await()
 
-            // Guardar en Room para acceso local
-            userDao.insertUser(user)
-            userDao.setCurrentUser(CurrentUser(value = user.id))
+                if (!userDoc.exists()) {
+                    throw Exception("No se encontraron los datos del usuario")
+                }
 
-            Result.success(user)
+                val userData = userDoc.data ?: throw Exception("Error al cargar los datos del usuario")
+                
+                val user = User(
+                    id = firebaseUser.uid,
+                    firstName = userData["firstName"] as? String ?: "",
+                    lastName = userData["lastName"] as? String ?: "",
+                    username = userData["username"] as? String ?: "",
+                    email = userData["email"] as? String ?: "",
+                    password = "", // No guardamos la contraseña en la base de datos local
+                    role = userData["role"] as? String ?: "Ambos roles",
+                    photoUrl = firebaseUser.photoUrl?.toString() ?: ""
+                )
+
+                // Guardar en Room para acceso local
+                userDao.insertUser(user)
+                userDao.setCurrentUser(CurrentUser(value = user.id))
+
+                Result.success(user)
+            } catch (e: com.google.firebase.auth.FirebaseAuthInvalidCredentialsException) {
+                Result.failure(Exception("Correo o contraseña incorrectos"))
+            } catch (e: com.google.firebase.auth.FirebaseAuthInvalidUserException) {
+                Result.failure(Exception("No se encontró la cuenta o fue deshabilitada"))
+            } catch (e: com.google.firebase.FirebaseNetworkException) {
+                Result.failure(Exception("Error de conexión. Verifica tu conexión a internet"))
+            } catch (e: com.google.firebase.auth.FirebaseAuthException) {
+                Result.failure(Exception("Error al iniciar sesión. Por favor, intenta de nuevo"))
+            }
         } catch (e: Exception) {
-            println("Error de inicio de sesión: ${e.message}")
-            val errorMessage = when {
-                e.message?.contains("The email address is badly formatted") == true -> "El correo electrónico no es válido"
-                e.message?.contains("The password is invalid") == true -> "Contraseña incorrecta"
-                e.message?.contains("The supplied auth credential is incorrect") == true -> "Contraseña incorrecta"
-                e.message?.contains("There is no user record") == true -> "No existe una cuenta con este correo electrónico"
-                e.message?.contains("A network error has occurred") == true -> "Error de conexión. Verifica tu conexión a internet"
-                e.message?.contains("Too many attempts") == true -> "Demasiados intentos. Por favor, espera un momento"
-                e.message?.contains("This user has been disabled") == true -> "Esta cuenta ha sido deshabilitada"
-                e.message?.contains("No se encontraron los datos del usuario") == true -> "No se encontraron los datos del usuario"
-                e.message?.contains("Error al cargar los datos del usuario") == true -> "Error al cargar los datos del usuario"
-                e.message?.contains("El correo electrónico y la contraseña son obligatorios") == true -> "El correo electrónico y la contraseña son obligatorios"
-                else -> "Error al iniciar sesión. Por favor, intenta de nuevo"
-            }
-            Result.failure(Exception(errorMessage))
+            Result.failure(Exception("Error al iniciar sesión. Por favor, intenta de nuevo"))
         }
     }
 
@@ -168,15 +170,25 @@ class UserRepository(
 
     suspend fun logout() = withContext(Dispatchers.IO) {
         try {
-            // Cerrar sesión en Firebase Auth
+            // Verificar la conexión a internet primero
+            try {
+                val response = firestore.collection("users").document("test").get().await()
+                if (!response.exists()) {
+                    // Esta bien que no exista, solo verificamos que podamos hacer la petición
+                }
+            } catch (e: Exception) {
+                return@withContext Result.failure(Exception("Error de conexión. Verifica tu conexión a internet"))
+            }
+
+            // Si llegamos aquí, hay conexión, procedemos con el cierre de sesión
             auth.signOut()
-            
-            // Limpiar datos locales
             userDao.clearCurrentUser()
             
             Result.success(Unit)
+        } catch (e: com.google.firebase.FirebaseNetworkException) {
+            Result.failure(Exception("Error de conexión. Verifica tu conexión a internet"))
         } catch (e: Exception) {
-            Result.failure(e)
+            Result.failure(Exception("Error al cerrar sesión"))
         }
     }
 
@@ -213,6 +225,38 @@ class UserRepository(
             userDao.updateUser(user)
 
             Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun updateVerificationLevel(userId: String, level: Int): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            // Actualizar en Firestore
+            firestore.collection("users")
+                .document(userId)
+                .update("verificationLevel", level)
+                .await()
+
+            // Actualizar en Room
+            userDao.updateUserVerificationLevel(userId, level)
+
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getVerificationLevel(userId: String): Result<Int> = withContext(Dispatchers.IO) {
+        try {
+            // Obtener de Firestore
+            val userDoc = firestore.collection("users")
+                .document(userId)
+                .get()
+                .await()
+
+            val level = userDoc.getLong("verificationLevel")?.toInt() ?: 0
+            Result.success(level)
         } catch (e: Exception) {
             Result.failure(e)
         }

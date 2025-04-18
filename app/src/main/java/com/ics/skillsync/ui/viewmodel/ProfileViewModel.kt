@@ -36,8 +36,14 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
+    private val _temporaryPhotoUrl = MutableStateFlow<String?>(null)
+    val temporaryPhotoUrl: StateFlow<String?> = _temporaryPhotoUrl.asStateFlow()
+
     private val storage = FirebaseStorage.getInstance()
     private val firestore = FirebaseFirestore.getInstance()
+
+    private val _verificationState = MutableStateFlow<VerificationState>(VerificationState.NotVerified)
+    val verificationState: StateFlow<VerificationState> = _verificationState.asStateFlow()
 
     init {
         val database = AppDatabase.getDatabase(application)
@@ -46,6 +52,33 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
             application = application
         )
         checkSession()
+        
+        // Agregar listener para cambios en la verificación del correo
+        FirebaseAuth.getInstance().addAuthStateListener { firebaseAuth ->
+            viewModelScope.launch {
+                val user = firebaseAuth.currentUser
+                if (user != null && user.isEmailVerified) {
+                    // Verificar si ya está actualizado en Firestore
+                    val userDoc = firestore.collection("users")
+                        .document(user.uid)
+                        .get()
+                        .await()
+
+                    if (userDoc.exists()) {
+                        val verificationLevel = userDoc.getLong("verificationLevel")?.toInt() ?: 0
+                        if (verificationLevel == 0) {
+                            // Actualizar a nivel 1 si el correo está verificado
+                            firestore.collection("users")
+                                .document(user.uid)
+                                .update("verificationLevel", 1)
+                                .await()
+                            
+                            _verificationState.value = VerificationState.Verified(1)
+                        }
+                    }
+                }
+            }
+        }
     }
 
     fun checkSession() {
@@ -261,6 +294,24 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     fun updateProfilePhoto(localImageUri: String) {
         viewModelScope.launch {
             try {
+                // Si la URI está vacía, limpiar la foto temporal
+                if (localImageUri.isBlank()) {
+                    _temporaryPhotoUrl.value = null
+                } else {
+                    // Actualizar la foto temporal
+                    _temporaryPhotoUrl.value = localImageUri
+                }
+            } catch (e: Exception) {
+                Log.e("ProfileViewModel", "Error updating profile photo", e)
+                _uiState.value = UiState.Error("Error al actualizar la foto de perfil")
+            }
+        }
+    }
+
+    // Nuevo método para guardar la foto de perfil en Firebase
+    fun saveProfilePhoto(localImageUri: String) {
+        viewModelScope.launch {
+            try {
                 val firebaseUser = FirebaseAuth.getInstance().currentUser
                 if (firebaseUser == null) {
                     _uiState.value = UiState.Error("Usuario no autenticado")
@@ -300,9 +351,12 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                     // 4. Actualizar estado local
                     _currentUser.value = _currentUser.value?.copy(photoUrl = downloadUrl)
                 }
+                
+                // Limpiar la foto temporal
+                _temporaryPhotoUrl.value = null
             } catch (e: Exception) {
-                Log.e("ProfileViewModel", "Error updating profile photo", e)
-                _uiState.value = UiState.Error("Error al actualizar la foto de perfil")
+                Log.e("ProfileViewModel", "Error saving profile photo", e)
+                _uiState.value = UiState.Error("Error al guardar la foto de perfil")
             }
         }
     }
@@ -321,10 +375,100 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    fun checkVerificationStatus() {
+        viewModelScope.launch {
+            try {
+                val firebaseUser = FirebaseAuth.getInstance().currentUser
+                if (firebaseUser != null) {
+                    val userDoc = firestore.collection("users")
+                        .document(firebaseUser.uid)
+                        .get()
+                        .await()
+
+                    if (userDoc.exists()) {
+                        val verificationLevel = userDoc.getLong("verificationLevel")?.toInt() ?: 0
+                        _verificationState.value = if (verificationLevel > 0) {
+                            VerificationState.Verified(verificationLevel)
+                        } else {
+                            VerificationState.NotVerified
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("ProfileViewModel", "Error checking verification status", e)
+            }
+        }
+    }
+
+    fun verifyEmail() {
+        viewModelScope.launch {
+            try {
+                val firebaseUser = FirebaseAuth.getInstance().currentUser
+                if (firebaseUser != null) {
+                    firebaseUser.sendEmailVerification().await()
+                    _uiState.value = UiState.Success("Se ha enviado un correo de verificación")
+                }
+            } catch (e: Exception) {
+                _uiState.value = UiState.Error("Error al enviar el correo de verificación")
+            }
+        }
+    }
+
+    fun uploadVerificationImage(imageUri: Uri) {
+        viewModelScope.launch {
+            try {
+                val firebaseUser = FirebaseAuth.getInstance().currentUser
+                if (firebaseUser != null) {
+                    val storageRef = storage.reference
+                    val imageRef = storageRef.child("verification_images/${firebaseUser.uid}/${UUID.randomUUID()}")
+                    
+                    imageRef.putFile(imageUri).await()
+                    val imageUrl = imageRef.downloadUrl.await().toString()
+
+                    // Actualizar en Firestore
+                    firestore.collection("users")
+                        .document(firebaseUser.uid)
+                        .update("verificationLevel", 2)
+                        .await()
+
+                    _uiState.value = UiState.Success("Imagen de verificación subida correctamente")
+                    checkVerificationStatus()
+                }
+            } catch (e: Exception) {
+                _uiState.value = UiState.Error("Error al subir la imagen de verificación")
+            }
+        }
+    }
+
+    fun completeVerificationExam() {
+        viewModelScope.launch {
+            try {
+                val firebaseUser = FirebaseAuth.getInstance().currentUser
+                if (firebaseUser != null) {
+                    // Actualizar en Firestore
+                    firestore.collection("users")
+                        .document(firebaseUser.uid)
+                        .update("verificationLevel", 3)
+                        .await()
+
+                    _uiState.value = UiState.Success("¡Felicidades! Has completado la verificación")
+                    checkVerificationStatus()
+                }
+            } catch (e: Exception) {
+                _uiState.value = UiState.Error("Error al completar la verificación")
+            }
+        }
+    }
+
     sealed class UiState {
         object Initial : UiState()
         object Loading : UiState()
         data class Success(val message: String) : UiState()
         data class Error(val message: String) : UiState()
+    }
+
+    sealed class VerificationState {
+        object NotVerified : VerificationState()
+        data class Verified(val level: Int) : VerificationState()
     }
 } 

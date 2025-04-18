@@ -118,26 +118,27 @@ fun SharedDrawerContent(
                             )
                         }
                         else -> {
-                            var isError by remember { mutableStateOf(false) }
+                            var isLoading by remember { mutableStateOf(true) }
                             
-                            if (isError) {
-                                Icon(
-                                    imageVector = Icons.Default.Person,
-                                    contentDescription = "Error al cargar la foto",
-                                    modifier = Modifier.size(40.dp),
-                                    tint = Color(0xFF5B4DBC)
-                                )
-                            } else {
-                                AsyncImage(
-                                    model = currentUser?.photoUrl,
-                                    contentDescription = "Foto de perfil",
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .clip(CircleShape),
-                                    contentScale = ContentScale.Crop,
-                                    onError = { isError = true }
+                            if (isLoading) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    color = Color(0xFF5B4DBC),
+                                    strokeWidth = 2.dp
                                 )
                             }
+                            
+                            AsyncImage(
+                                model = currentUser?.photoUrl,
+                                contentDescription = "Foto de perfil",
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(CircleShape),
+                                contentScale = ContentScale.Crop,
+                                onLoading = { isLoading = true },
+                                onSuccess = { isLoading = false },
+                                onError = { isLoading = false }
+                            )
                         }
                     }
                 }

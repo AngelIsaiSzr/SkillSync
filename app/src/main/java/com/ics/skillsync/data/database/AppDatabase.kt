@@ -10,7 +10,7 @@ import com.ics.skillsync.data.database.dao.UserDao
 import com.ics.skillsync.data.database.entity.CurrentUser
 import com.ics.skillsync.data.database.entity.User
 
-@Database(entities = [User::class, CurrentUser::class], version = 4, exportSchema = false)
+@Database(entities = [User::class, CurrentUser::class], version = 5, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun userDao(): UserDao
 
@@ -111,6 +111,38 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // Crear tabla temporal de usuarios con el nuevo campo verificationLevel
+                database.execSQL("""
+                    CREATE TABLE users_new (
+                        id TEXT PRIMARY KEY NOT NULL,
+                        firstName TEXT NOT NULL,
+                        lastName TEXT NOT NULL,
+                        username TEXT NOT NULL,
+                        email TEXT NOT NULL,
+                        password TEXT NOT NULL,
+                        role TEXT NOT NULL,
+                        photoUrl TEXT NOT NULL DEFAULT '',
+                        verificationLevel INTEGER NOT NULL DEFAULT 0
+                    )
+                """)
+
+                // Copiar datos de la tabla antigua a la nueva
+                database.execSQL("""
+                    INSERT INTO users_new (id, firstName, lastName, username, email, password, role, photoUrl, verificationLevel)
+                    SELECT id, firstName, lastName, username, email, password, role, photoUrl, 0
+                    FROM users
+                """)
+
+                // Eliminar tabla antigua
+                database.execSQL("DROP TABLE users")
+
+                // Renombrar tabla nueva
+                database.execSQL("ALTER TABLE users_new RENAME TO users")
+            }
+        }
+
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -118,7 +150,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "skillsync_database"
                 )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                 .build()
                 INSTANCE = instance
                 instance
