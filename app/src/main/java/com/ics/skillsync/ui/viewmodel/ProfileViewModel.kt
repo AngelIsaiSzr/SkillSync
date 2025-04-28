@@ -57,23 +57,29 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
         FirebaseAuth.getInstance().addAuthStateListener { firebaseAuth ->
             viewModelScope.launch {
                 val user = firebaseAuth.currentUser
-                if (user != null && user.isEmailVerified) {
-                    // Verificar si ya está actualizado en Firestore
-                    val userDoc = firestore.collection("users")
-                        .document(user.uid)
-                        .get()
-                        .await()
+                if (user != null) {
+                    // Forzar recarga del usuario para obtener el estado más reciente
+                    user.reload().await()
+                    
+                    if (user.isEmailVerified) {
+                        // Obtener el nivel de verificación actual de Firestore
+                        val userDoc = firestore.collection("users")
+                            .document(user.uid)
+                            .get()
+                            .await()
 
-                    if (userDoc.exists()) {
-                        val verificationLevel = userDoc.getLong("verificationLevel")?.toInt() ?: 0
-                        if (verificationLevel == 0) {
-                            // Actualizar a nivel 1 si el correo está verificado
-                            firestore.collection("users")
-                                .document(user.uid)
-                                .update("verificationLevel", 1)
-                                .await()
+                        if (userDoc.exists()) {
+                            val verificationLevel = userDoc.getLong("verificationLevel")?.toInt() ?: 0
                             
-                            _verificationState.value = VerificationState.Verified(1)
+                            // Si el nivel es 0, actualizar a 1
+                            if (verificationLevel == 0) {
+                                firestore.collection("users")
+                                    .document(user.uid)
+                                    .update("verificationLevel", 1)
+                                    .await()
+                                
+                                _verificationState.value = VerificationState.Verified(1)
+                            }
                         }
                     }
                 }
@@ -86,6 +92,9 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
             try {
                 val firebaseUser = FirebaseAuth.getInstance().currentUser
                 if (firebaseUser != null) {
+                    // Forzar recarga del usuario para obtener el estado más reciente
+                    firebaseUser.reload().await()
+                    
                     // Obtener datos del usuario de Firestore
                     val userDoc = firestore.collection("users")
                         .document(firebaseUser.uid)
@@ -109,6 +118,9 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                         
                         // Actualizar la base de datos local
                         repository.updateUser(user)
+                        
+                        // Verificar el estado de verificación
+                        checkVerificationStatus()
                     }
                 } else {
                     _currentUser.value = null
@@ -380,18 +392,34 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
             try {
                 val firebaseUser = FirebaseAuth.getInstance().currentUser
                 if (firebaseUser != null) {
-                    val userDoc = firestore.collection("users")
-                        .document(firebaseUser.uid)
-                        .get()
-                        .await()
+                    // Forzar recarga del usuario para obtener el estado más reciente
+                    firebaseUser.reload().await()
+                    
+                    // Verificar si el correo está verificado
+                    if (firebaseUser.isEmailVerified) {
+                        // Obtener el nivel de verificación actual de Firestore
+                        val userDoc = firestore.collection("users")
+                            .document(firebaseUser.uid)
+                            .get()
+                            .await()
 
-                    if (userDoc.exists()) {
-                        val verificationLevel = userDoc.getLong("verificationLevel")?.toInt() ?: 0
-                        _verificationState.value = if (verificationLevel > 0) {
-                            VerificationState.Verified(verificationLevel)
-                        } else {
-                            VerificationState.NotVerified
+                        if (userDoc.exists()) {
+                            val verificationLevel = userDoc.getLong("verificationLevel")?.toInt() ?: 0
+                            
+                            // Si el nivel es 0, actualizar a 1
+                            if (verificationLevel == 0) {
+                                firestore.collection("users")
+                                    .document(firebaseUser.uid)
+                                    .update("verificationLevel", 1)
+                                    .await()
+                                
+                                _verificationState.value = VerificationState.Verified(1)
+                            } else {
+                                _verificationState.value = VerificationState.Verified(verificationLevel)
+                            }
                         }
+                    } else {
+                        _verificationState.value = VerificationState.NotVerified
                     }
                 }
             } catch (e: Exception) {
