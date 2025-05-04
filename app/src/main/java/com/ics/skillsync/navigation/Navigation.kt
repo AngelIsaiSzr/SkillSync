@@ -65,10 +65,11 @@ fun Navigation(
                 navController = navController
             )
         }
-        composable("skill/{skillId}") { backStackEntry ->
+        composable("skill/{cardId}") { backStackEntry ->
             SkillDetailScreen(
-                skillId = backStackEntry.arguments?.getString("skillId") ?: "",
-                navController = navController
+                cardId = backStackEntry.arguments?.getString("cardId") ?: "",
+                navController = navController,
+                teachingCardViewModel = teachingCardViewModel
             )
         }
         composable("skills") {

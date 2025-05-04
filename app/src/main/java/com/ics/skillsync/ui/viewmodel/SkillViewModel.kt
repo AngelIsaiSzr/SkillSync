@@ -253,6 +253,35 @@ class SkillViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    suspend fun loadMentorSkills(mentorId: String): List<Skill> {
+        return try {
+            val skillsSnapshot = firestore.collection("users")
+                .document(mentorId)
+                .collection("skills")
+                .whereEqualTo("type", "TEACH")
+                .get()
+                .await()
+
+            skillsSnapshot.documents.mapNotNull { doc ->
+                try {
+                    Skill(
+                        id = doc.id,
+                        userId = mentorId,
+                        name = doc.getString("name") ?: "",
+                        type = Skill.SkillType.TEACH,
+                        level = doc.getLong("level")?.toInt() ?: 1
+                    )
+                } catch (e: Exception) {
+                    Log.e("SkillViewModel", "Error parsing mentor skill document", e)
+                    null
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("SkillViewModel", "Error loading mentor skills", e)
+            emptyList()
+        }
+    }
+
     sealed class UiState {
         object Initial : UiState()
         object Loading : UiState()

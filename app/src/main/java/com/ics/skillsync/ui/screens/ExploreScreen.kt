@@ -55,7 +55,7 @@ fun ExploreScreen(
     
     // Convertir TeachingCards a Skills para mantener la compatibilidad
     val skills = teachingCards.map { card ->
-        Skill(
+            Skill(
             id = card.id,
             name = card.title,
             description = card.description,
