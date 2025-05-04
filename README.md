@@ -105,7 +105,7 @@ dependencies {
 
 1. Clona el repositorio
 ```bash
-git clone https://github.com/yourusername/SkillSync.git
+git clone https://github.com/AngelIsaiSzr/SkillSync.git
 ```
 
 2. Abre el proyecto en Android Studio
