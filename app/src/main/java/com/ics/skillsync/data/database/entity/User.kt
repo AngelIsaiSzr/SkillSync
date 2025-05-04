@@ -14,7 +14,9 @@ data class User(
     val password: String,
     val role: String,
     val photoUrl: String = "",
-    val verificationLevel: Int = 0 // 0 = No verificado, 1 = Email verificado, 2 = Imagen verificada, 3 = Examen aprobado
+    val verificationLevel: Int = 0, // 0 = No verificado, 1 = Email verificado, 2 = Imagen verificada, 3 = Examen aprobado
+    val biography: String = "",
+    val availability: String = ""
 ) {
     // Constructor sin argumentos requerido por Firestore
     constructor() : this(
@@ -26,6 +28,8 @@ data class User(
         password = "",
         role = "",
         photoUrl = "",
-        verificationLevel = 0
+        verificationLevel = 0,
+        biography = "",
+        availability = ""
     )
 } 

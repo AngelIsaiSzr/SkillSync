@@ -125,6 +125,8 @@ fun EditProfileScreen(
     var username by remember { mutableStateOf(currentUser?.username ?: "") }
     var email by remember { mutableStateOf(currentUser?.email ?: "") }
     var selectedRole by remember { mutableStateOf(currentUser?.role ?: "Ambos roles") }
+    var biography by remember { mutableStateOf(currentUser?.biography ?: "") }
+    var availability by remember { mutableStateOf(currentUser?.availability ?: "") }
     var expanded by remember { mutableStateOf(false) }
     val roles = listOf("Ambos roles", "Mentor", "Aprendiz")
 
@@ -136,6 +138,8 @@ fun EditProfileScreen(
             username = user.username
             email = user.email
             selectedRole = user.role
+            biography = user.biography
+            availability = user.availability
         }
     }
 
@@ -191,7 +195,9 @@ fun EditProfileScreen(
                 lastName = lastName,
                 username = username,
                 email = email,
-                role = selectedRole
+                role = selectedRole,
+                biography = biography,
+                availability = availability
             )
             
             // Navegar a la pantalla de perfil después de actualizar
@@ -239,6 +245,8 @@ fun EditProfileScreen(
                     username = user.username
                     email = user.email
                     selectedRole = user.role
+                    biography = user.biography
+                    availability = user.availability
                 }
             }
         }
@@ -465,6 +473,36 @@ fun EditProfileScreen(
                                 }
                             }
                         }
+
+                        // Biografía
+                        OutlinedTextField(
+                            value = biography,
+                            onValueChange = { biography = it },
+                            label = { Text("Biografía") },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(120.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                unfocusedBorderColor = Color.LightGray,
+                                focusedBorderColor = Color(0xFF5B4DBC)
+                            ),
+                            placeholder = { Text("Cuéntanos sobre ti, tus intereses y experiencia...") },
+                            minLines = 3,
+                            maxLines = 5
+                        )
+
+                        // Disponibilidad
+                        OutlinedTextField(
+                            value = availability,
+                            onValueChange = { availability = it },
+                            label = { Text("Disponibilidad") },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                unfocusedBorderColor = Color.LightGray,
+                                focusedBorderColor = Color(0xFF5B4DBC)
+                            ),
+                            placeholder = { Text("Ej: Lunes y miércoles por la tarde, fines de semana...") }
+                        )
                     }
                 }
 

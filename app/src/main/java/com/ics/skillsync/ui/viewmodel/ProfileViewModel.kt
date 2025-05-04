@@ -21,6 +21,7 @@ import android.util.Log
 import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.firestore.FirebaseFirestore
 import java.util.UUID
+import com.google.firebase.firestore.ListenerRegistration
 
 class ProfileViewModel(application: Application) : AndroidViewModel(application) {
     private val repository: UserRepository
@@ -41,9 +42,14 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
 
     private val storage = FirebaseStorage.getInstance()
     private val firestore = FirebaseFirestore.getInstance()
+    private var skillCountListener: ListenerRegistration? = null
+    private var isSkillCountInitialized = false
 
     private val _verificationState = MutableStateFlow<VerificationState>(VerificationState.NotVerified)
     val verificationState: StateFlow<VerificationState> = _verificationState.asStateFlow()
+
+    private val _skillCount = MutableStateFlow(0)
+    val skillCount: StateFlow<Int> = _skillCount.asStateFlow()
 
     init {
         val database = AppDatabase.getDatabase(application)
@@ -60,6 +66,12 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                 if (user != null) {
                     // Forzar recarga del usuario para obtener el estado más reciente
                     user.reload().await()
+                    
+                    // Solo actualizar el conteo si no está inicializado
+                    if (!isSkillCountInitialized) {
+                        updateSkillCount(user.uid)
+                        isSkillCountInitialized = true
+                    }
                     
                     if (user.isEmailVerified) {
                         // Obtener el nivel de verificación actual de Firestore
@@ -82,6 +94,16 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                             }
                         }
                     }
+                } else {
+                    // Resetear el estado cuando el usuario cierra sesión
+                    isSkillCountInitialized = false
+                    skillCountListener?.remove()
+                    skillCountListener = null
+                    _skillCount.value = 0
+                    _currentUser.value = null
+                    _isAuthenticated.value = false
+                    _verificationState.value = VerificationState.NotVerified
+                    _uiState.value = UiState.Initial
                 }
             }
         }
@@ -111,7 +133,9 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                             email = userData?.get("email") as? String ?: "",
                             password = "", // Password vacío ya que no lo necesitamos para mostrar datos
                             role = userData?.get("role") as? String ?: "Ambos roles",
-                            photoUrl = firebaseUser.photoUrl?.toString() ?: ""
+                            photoUrl = firebaseUser.photoUrl?.toString() ?: "",
+                            biography = userData?.get("biography") as? String ?: "",
+                            availability = userData?.get("availability") as? String ?: ""
                         )
                         _currentUser.value = user
                         _isAuthenticated.value = true
@@ -125,12 +149,14 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                 } else {
                     _currentUser.value = null
                     _isAuthenticated.value = false
+                    _verificationState.value = VerificationState.NotVerified
                 }
                 _uiState.value = UiState.Initial
             } catch (e: Exception) {
                 Log.e("ProfileViewModel", "Error in checkSession", e)
                 _currentUser.value = null
                 _isAuthenticated.value = false
+                _verificationState.value = VerificationState.NotVerified
                 _uiState.value = UiState.Initial
             }
         }
@@ -180,6 +206,8 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                     onSuccess = { user ->
                         _currentUser.value = user
                         _isAuthenticated.value = true
+                        // Verificar el estado de verificación después del login exitoso
+                        checkVerificationStatus()
                         _uiState.value = if (isFirstLogin) {
                             UiState.Success("¡Bienvenido a SkillSync!")
                         } else {
@@ -191,12 +219,14 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                     onFailure = {
                         _currentUser.value = null
                         _isAuthenticated.value = false
+                        _verificationState.value = VerificationState.NotVerified
                         _uiState.value = UiState.Error(it.message ?: "Error al iniciar sesión")
                     }
                 )
             } catch (e: Exception) {
                 _currentUser.value = null
                 _isAuthenticated.value = false
+                _verificationState.value = VerificationState.NotVerified
                 _uiState.value = UiState.Error(e.message ?: "Error al iniciar sesión")
             } finally {
                 _isLoading.value = false
@@ -212,6 +242,7 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                 repository.logout()
                 _currentUser.value = null
                 _isAuthenticated.value = false
+                _verificationState.value = VerificationState.NotVerified
                 _uiState.value = UiState.Success("¡Hasta pronto!")
                 delay(2000) // Esperar 2 segundos antes de limpiar el estado
                 clearUiState()
@@ -228,7 +259,9 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
         lastName: String,
         username: String,
         email: String,
-        role: String
+        role: String,
+        biography: String = "",
+        availability: String = ""
     ) {
         viewModelScope.launch {
             _isLoading.value = true
@@ -243,7 +276,9 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                     "username" to username,
                     "email" to email,
                     "role" to role,
-                    "photoUrl" to (firebaseUser.photoUrl?.toString() ?: "")
+                    "photoUrl" to (firebaseUser.photoUrl?.toString() ?: ""),
+                    "biography" to biography,
+                    "availability" to availability
                 )
 
                 // Actualizar en Firestore
@@ -261,7 +296,9 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                     email = email,
                     password = "", // Password vacío ya que no lo necesitamos para actualizar
                     role = role,
-                    photoUrl = firebaseUser.photoUrl?.toString() ?: ""
+                    photoUrl = firebaseUser.photoUrl?.toString() ?: "",
+                    biography = biography,
+                    availability = availability
                 )
 
                 // Actualizar en la base de datos local
@@ -486,6 +523,63 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                 _uiState.value = UiState.Error("Error al completar la verificación")
             }
         }
+    }
+
+    private fun updateSkillCount(userId: String) {
+        viewModelScope.launch {
+            try {
+                // Remover el listener anterior si existe
+                skillCountListener?.remove()
+                skillCountListener = null
+
+                // Limpiar el valor actual
+                _skillCount.value = 0
+
+                // Obtener el conteo inicial directamente de Firestore
+                val initialCount = firestore.collection("users")
+                    .document(userId)
+                    .collection("skills")
+                    .get()
+                    .await()
+                    .size()
+                
+                // Establecer el conteo inicial
+                _skillCount.value = initialCount
+
+                // Agregar el nuevo listener
+                skillCountListener = firestore.collection("users")
+                    .document(userId)
+                    .collection("skills")
+                    .addSnapshotListener { snapshot, e ->
+                        if (e != null) {
+                            Log.e("ProfileViewModel", "Error getting skill count", e)
+                            return@addSnapshotListener
+                        }
+
+                        if (snapshot != null) {
+                            // Solo actualizar si el valor es diferente
+                            val newCount = snapshot.size()
+                            if (newCount != _skillCount.value) {
+                                _skillCount.value = newCount
+                            }
+                        }
+                    }
+            } catch (e: Exception) {
+                Log.e("ProfileViewModel", "Error updating skill count", e)
+                // En caso de error, mantener el valor en 0
+                _skillCount.value = 0
+            }
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        // Limpiar el listener cuando el ViewModel se destruye
+        skillCountListener?.remove()
+        skillCountListener = null
+        isSkillCountInitialized = false
+        // También limpiar el conteo
+        _skillCount.value = 0
     }
 
     sealed class UiState {

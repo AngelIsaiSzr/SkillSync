@@ -6,6 +6,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.ics.skillsync.ui.screens.*
 import com.ics.skillsync.ui.viewmodel.ProfileViewModel
+import com.ics.skillsync.ui.viewmodel.SkillViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 
 @Composable
@@ -13,7 +14,8 @@ fun Navigation(
     navController: NavHostController,
     startDestination: String = "splash"
 ) {
-    val viewModel: ProfileViewModel = viewModel()
+    val profileViewModel: ProfileViewModel = viewModel()
+    val skillViewModel: SkillViewModel = viewModel()
     
     NavHost(
         navController = navController,
@@ -24,19 +26,19 @@ fun Navigation(
         }
         
         composable("home") {
-            HomeScreen(navController = navController, viewModel = viewModel)
+            HomeScreen(navController = navController, viewModel = profileViewModel)
         }
         composable("explore") {
-            ExploreScreen(navController = navController, viewModel = viewModel)
+            ExploreScreen(navController = navController, viewModel = profileViewModel)
         }
         composable("chats") {
-            ChatsScreen(navController = navController, viewModel = viewModel)
+            ChatsScreen(navController = navController, viewModel = profileViewModel)
         }
         composable("profile") {
-            ProfileScreen(navController = navController, viewModel = viewModel)
+            ProfileScreen(navController = navController, viewModel = profileViewModel)
         }
         composable("edit_profile") {
-            EditProfileScreen(navController = navController, viewModel = viewModel)
+            EditProfileScreen(navController = navController, viewModel = profileViewModel)
         }
         composable("search") {
             SearchScreen(navController = navController)
@@ -57,6 +59,13 @@ fun Navigation(
             SkillDetailScreen(
                 skillId = backStackEntry.arguments?.getString("skillId") ?: "",
                 navController = navController
+            )
+        }
+        composable("skills") {
+            SkillsScreen(
+                navController = navController,
+                skillViewModel = skillViewModel,
+                profileViewModel = profileViewModel
             )
         }
     }

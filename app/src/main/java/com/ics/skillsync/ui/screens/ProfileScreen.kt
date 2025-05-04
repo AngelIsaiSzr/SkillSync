@@ -863,6 +863,22 @@ fun ProfileScreen(
                                         label = "Rol",
                                         value = user.role ?: "No especificado"
                                     )
+
+                                    Spacer(modifier = Modifier.height(12.dp))
+
+                                    InfoField(
+                                        icon = Icons.Default.Description,
+                                        label = "Biografía",
+                                        value = user.biography.ifEmpty { "No especificada" }
+                                    )
+
+                                    Spacer(modifier = Modifier.height(12.dp))
+
+                                    InfoField(
+                                        icon = Icons.Default.Schedule,
+                                        label = "Disponibilidad",
+                                        value = user.availability.ifEmpty { "No especificada" }
+                                    )
                                 }
                             }
                         }
@@ -893,9 +909,10 @@ fun ProfileScreen(
                                     value = "0",
                                     label = "Sesiones"
                                 )
+                                val skillCount by viewModel.skillCount.collectAsState()
                                 StatisticItem(
                                     icon = Icons.Default.WorkspacePremium,
-                                    value = "0",
+                                    value = skillCount.toString(),
                                     label = "Habilidades"
                                 )
                             }
@@ -969,6 +986,27 @@ fun ProfileScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text("Editar Perfil")
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Button(
+                            onClick = { navController.navigate("skills") },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFF5B4DBC)
+                            ),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.School,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Mis Habilidades")
                         }
 
                         Spacer(modifier = Modifier.height(12.dp))

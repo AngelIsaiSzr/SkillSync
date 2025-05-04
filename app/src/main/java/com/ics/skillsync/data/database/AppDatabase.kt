@@ -7,12 +7,19 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.ics.skillsync.data.database.dao.UserDao
-import com.ics.skillsync.data.database.entity.CurrentUser
+import com.ics.skillsync.data.database.dao.SkillDao
 import com.ics.skillsync.data.database.entity.User
+import com.ics.skillsync.data.database.entity.CurrentUser
+import com.ics.skillsync.data.database.entity.Skill
 
-@Database(entities = [User::class, CurrentUser::class], version = 5, exportSchema = false)
+@Database(
+    entities = [User::class, CurrentUser::class, Skill::class],
+    version = 7,
+    exportSchema = false
+)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun userDao(): UserDao
+    abstract fun skillDao(): SkillDao
 
     companion object {
         @Volatile
@@ -143,6 +150,59 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS skills (
+                        id TEXT PRIMARY KEY NOT NULL,
+                        userId TEXT NOT NULL,
+                        name TEXT NOT NULL,
+                        type TEXT NOT NULL,
+                        level INTEGER NOT NULL
+                    )
+                """)
+            }
+        }
+
+        private val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // Crear tabla temporal de usuarios con los nuevos campos
+                database.execSQL("""
+                    CREATE TABLE users_new (
+                        id TEXT PRIMARY KEY NOT NULL,
+                        firstName TEXT NOT NULL,
+                        lastName TEXT NOT NULL,
+                        username TEXT NOT NULL,
+                        email TEXT NOT NULL,
+                        password TEXT NOT NULL,
+                        role TEXT NOT NULL,
+                        photoUrl TEXT NOT NULL DEFAULT '',
+                        verificationLevel INTEGER NOT NULL DEFAULT 0,
+                        biography TEXT NOT NULL DEFAULT '',
+                        availability TEXT NOT NULL DEFAULT ''
+                    )
+                """)
+
+                // Copiar datos de la tabla antigua a la nueva
+                database.execSQL("""
+                    INSERT INTO users_new (
+                        id, firstName, lastName, username, email, password, 
+                        role, photoUrl, verificationLevel, biography, availability
+                    )
+                    SELECT 
+                        id, firstName, lastName, username, email, password,
+                        role, photoUrl, verificationLevel, '', ''
+                    FROM users
+                """)
+
+                // Eliminar tabla antigua
+                database.execSQL("DROP TABLE users")
+
+                // Renombrar tabla nueva
+                database.execSQL("ALTER TABLE users_new RENAME TO users")
+            }
+        }
+
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -150,7 +210,14 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "skillsync_database"
                 )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+                .addMigrations(
+                    MIGRATION_1_2,
+                    MIGRATION_2_3,
+                    MIGRATION_3_4,
+                    MIGRATION_4_5,
+                    MIGRATION_5_6,
+                    MIGRATION_6_7
+                )
                 .build()
                 INSTANCE = instance
                 instance
