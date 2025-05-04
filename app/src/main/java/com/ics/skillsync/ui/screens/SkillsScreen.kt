@@ -509,9 +509,16 @@ fun SkillItem(
     Card(
         modifier = Modifier
             .fillMaxWidth(),
-        shape = RoundedCornerShape(8.dp),
+        shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
             containerColor = Color.White
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 2.dp
+        ),
+        border = BorderStroke(
+            width = 1.dp,
+            color = Color(0xFFE5E7EB)
         )
     ) {
         Row(
@@ -521,7 +528,10 @@ fun SkillItem(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
                 Text(
                     text = skill.name,
                     fontSize = 16.sp,
@@ -549,7 +559,10 @@ fun SkillItem(
                     color = Color(0xFF6B7280)
                 )
             }
-            IconButton(onClick = onDelete) {
+            IconButton(
+                onClick = onDelete,
+                modifier = Modifier.padding(start = 8.dp)
+            ) {
                 Icon(
                     imageVector = Icons.Default.Delete,
                     contentDescription = "Eliminar habilidad",

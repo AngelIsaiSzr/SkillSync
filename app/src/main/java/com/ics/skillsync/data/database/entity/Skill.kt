@@ -9,8 +9,8 @@ data class Skill(
     val id: String,
     val userId: String,
     val name: String,
-    val type: SkillType, // TEACH o LEARN
-    val level: Int // 1-Básico, 2-Intermedio, 3-Avanzado
+    val type: SkillType,
+    val level: Int
 ) {
     enum class SkillType {
         TEACH, LEARN

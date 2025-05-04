@@ -39,135 +39,38 @@ import com.ics.skillsync.ui.components.SharedNavigationDrawer
 import com.ics.skillsync.ui.components.SharedTopBar
 import com.ics.skillsync.ui.components.SharedBottomBar
 import com.ics.skillsync.ui.viewmodel.ProfileViewModel
+import com.ics.skillsync.ui.viewmodel.TeachingCardViewModel
+import com.ics.skillsync.model.TeachingCard
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExploreScreen(
     navController: NavController,
-    viewModel: ProfileViewModel
+    viewModel: ProfileViewModel,
+    teachingCardViewModel: TeachingCardViewModel
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+    val teachingCards by teachingCardViewModel.teachingCards.collectAsState()
     
-    val skills = remember {
-        listOf(
-            Skill(
-                id = "1",
-                name = "Inglés Conversacional",
-                description = "Practica inglés con hablantes nativos y mejora tu fluidez, pronunciación y confianza al hablar.",
-                category = SkillCategory.IDIOMAS,
-                imageUrl = "https://images.unsplash.com/photo-1546410531-bb4caa6b424d",
-                mentorsCount = 1,
-                learnersCount = 1
-            ),
-            Skill(
-                id = "2",
-                name = "Español para Principiantes",
-                description = "Aprende vocabulario básico, gramática y frases útiles para comunicarte en español.",
-                category = SkillCategory.IDIOMAS,
-                imageUrl = "https://images.unsplash.com/photo-1489945052260-4f21c52268b9",
-                mentorsCount = 0,
-                learnersCount = 0
-            ),
-            Skill(
-                id = "3",
-                name = "Francés Básico",
-                description = "Aprende los fundamentos del idioma francés, desde pronunciación hasta conversaciones simples.",
-                category = SkillCategory.IDIOMAS,
-                imageUrl = "https://images.unsplash.com/photo-1551866442-64e75e911c23",
-                mentorsCount = 0,
-                learnersCount = 1
-            ),
-            Skill(
-                id = "4",
-                name = "Desarrollo Web Frontend",
-                description = "Aprende HTML, CSS, JavaScript y frameworks populares como React y Vue para crear sitios web interactivos.",
-                category = SkillCategory.TECNOLOGIA,
-                imageUrl = "https://images.unsplash.com/photo-1633356122544-f134324a6cee",
-                mentorsCount = 1,
-                learnersCount = 0
-            ),
-            Skill(
-                id = "5",
-                name = "Python para Principiantes",
-                description = "Introducción a la programación con Python, desde conceptos básicos hasta aplicaciones prácticas.",
-                category = SkillCategory.TECNOLOGIA,
-                imageUrl = "https://images.unsplash.com/photo-1649180556628-9ba704115795",
-                mentorsCount = 0,
-                learnersCount = 0
-            ),
-            Skill(
-                id = "6",
-                name = "JavaScript Avanzado",
-                description = "Aprende conceptos avanzados de JavaScript como promesas, async/await, y manipulación del DOM.",
-                category = SkillCategory.TECNOLOGIA,
-                imageUrl = "https://images.unsplash.com/photo-1592609931095-54a2168ae893",
-                mentorsCount = 0,
-                learnersCount = 0
-            ),
-            Skill(
-                id = "7",
-                name = "Guitarra Acústica",
-                description = "Aprende a tocar guitarra desde cero o mejora tus habilidades con técnicas avanzadas de rasgueo y punteo.",
-                category = SkillCategory.MUSICA,
-                imageUrl = "https://images.unsplash.com/photo-1525201548942-d8732f6617a0",
-                mentorsCount = 0,
-                learnersCount = 0
-            ),
-            Skill(
-                id = "8",
-                name = "Piano Básico",
-                description = "Aprende a leer partituras, técnicas básicas de piano y tus primeras canciones.",
-                category = SkillCategory.MUSICA,
-                imageUrl = "https://images.unsplash.com/photo-1552422535-c45813c61732",
-                mentorsCount = 1,
-                learnersCount = 0
-            ),
-            Skill(
-                id = "9",
-                name = "Canto: Técnica Vocal",
-                description = "Mejora tu capacidad vocal con técnicas de respiración, proyección y control de tono.",
-                category = SkillCategory.MUSICA,
-                imageUrl = "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7",
-                mentorsCount = 1,
-                learnersCount = 0
-            ),
-            Skill(
-                id = "10",
-                name = "Dibujo Artístico",
-                description = "Aprende técnicas fundamentales de dibujo, proporción, sombreado y perspectiva.",
-                category = SkillCategory.ARTE,
-                imageUrl = "https://images.unsplash.com/photo-1605721911519-3dfeb3be25e7",
-                mentorsCount = 0,
-                learnersCount = 0
-            ),
-            Skill(
-                id = "11",
-                name = "Edición de Video Básica",
-                description = "Domina las técnicas fundamentales de edición de video usando software accesible.",
-                category = SkillCategory.ARTE,
-                imageUrl = "https://images.unsplash.com/photo-1536240478700-b869070f9279",
-                mentorsCount = 0,
-                learnersCount = 0
-            ),
-            Skill(
-                id = "12",
-                name = "Marketing Digital",
-                description = "Conoce las estrategias fundamentales para promocionar productos y servicios en el entorno digital.",
-                category = SkillCategory.OTROS,
-                imageUrl = "https://images.unsplash.com/photo-1460925895917-afdab827c52f",
-                mentorsCount = 0,
-                learnersCount = 0
-            ),
-            Skill(
-                id = "13",
-                name = "Ventas en Línea",
-                description = "Aprende a crear y gestionar una tienda online y estrategias para incrementar tus ventas.",
-                category = SkillCategory.OTROS,
-                imageUrl = "https://images.unsplash.com/photo-1556740738-b6a63e27c4df",
-                mentorsCount = 0,
-                learnersCount = 0
-            )
+    // Convertir TeachingCards a Skills para mantener la compatibilidad
+    val skills = teachingCards.map { card ->
+        Skill(
+            id = card.id,
+            name = card.title,
+            description = card.description,
+            category = SkillCategory.fromString(card.category),
+            imageUrl = card.imageUrl,
+            mentorsCount = 1, // Mantenemos esto ya que cada tarjeta tiene un mentor
+            learnersCount = card.learnerCount,
+            mentorName = card.mentorName,
+            level = when (card.experienceLevel) {
+                TeachingCard.ExperienceLevel.PRINCIPIANTE -> 1
+                TeachingCard.ExperienceLevel.BASICO -> 2
+                TeachingCard.ExperienceLevel.INTERMEDIO -> 3
+                TeachingCard.ExperienceLevel.AVANZADO -> 4
+                TeachingCard.ExperienceLevel.EXPERTO -> 5
+            }
         )
     }
 
@@ -175,14 +78,17 @@ fun ExploreScreen(
     var searchQuery by remember { mutableStateOf("") }
     var filterType by remember { mutableStateOf("Todas") }
 
-    val filteredSkills = remember(selectedCategory, searchQuery, filterType) {
+    val filteredSkills = remember(selectedCategory, searchQuery, filterType, skills) {
         skills.filter { skill ->
             val matchesCategory = selectedCategory?.let { skill.category == it } ?: true
             val matchesSearch = skill.name.contains(searchQuery, ignoreCase = true) ||
                     skill.description.contains(searchQuery, ignoreCase = true)
             val matchesFilter = when (filterType) {
-                "Quiero enseñar" -> skill.mentorsCount > 0
-                "Quiero aprender" -> skill.learnersCount > 0
+                "Principiante" -> skill.level == 1
+                "Básico" -> skill.level == 2
+                "Intermedio" -> skill.level == 3
+                "Avanzado" -> skill.level == 4
+                "Experto" -> skill.level == 5
                 else -> true
             }
             matchesCategory && matchesSearch && matchesFilter
@@ -276,9 +182,9 @@ fun ExploreScreen(
                             }
                             item {
                                 FilterChip(
-                                    selected = filterType == "Quiero enseñar",
-                                    onClick = { filterType = "Quiero enseñar" },
-                                    label = { Text("Quiero enseñar") },
+                                    selected = filterType == "Principiante",
+                                    onClick = { filterType = "Principiante" },
+                                    label = { Text("Principiante") },
                                     colors = FilterChipDefaults.filterChipColors(
                                         selectedContainerColor = Color(0xFF5B4DBC),
                                         selectedLabelColor = Color.White
@@ -287,9 +193,42 @@ fun ExploreScreen(
                             }
                             item {
                                 FilterChip(
-                                    selected = filterType == "Quiero aprender",
-                                    onClick = { filterType = "Quiero aprender" },
-                                    label = { Text("Quiero aprender") },
+                                    selected = filterType == "Básico",
+                                    onClick = { filterType = "Básico" },
+                                    label = { Text("Básico") },
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = Color(0xFF5B4DBC),
+                                        selectedLabelColor = Color.White
+                                    )
+                                )
+                            }
+                            item {
+                                FilterChip(
+                                    selected = filterType == "Intermedio",
+                                    onClick = { filterType = "Intermedio" },
+                                    label = { Text("Intermedio") },
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = Color(0xFF5B4DBC),
+                                        selectedLabelColor = Color.White
+                                    )
+                                )
+                            }
+                            item {
+                                FilterChip(
+                                    selected = filterType == "Avanzado",
+                                    onClick = { filterType = "Avanzado" },
+                                    label = { Text("Avanzado") },
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = Color(0xFF5B4DBC),
+                                        selectedLabelColor = Color.White
+                                    )
+                                )
+                            }
+                            item {
+                                FilterChip(
+                                    selected = filterType == "Experto",
+                                    onClick = { filterType = "Experto" },
+                                    label = { Text("Experto") },
                                     colors = FilterChipDefaults.filterChipColors(
                                         selectedContainerColor = Color(0xFF5B4DBC),
                                         selectedLabelColor = Color.White
@@ -317,7 +256,7 @@ fun ExploreScreen(
                                 FilterChip(
                                     selected = selectedCategory == category,
                                     onClick = { selectedCategory = category },
-                                    label = { Text(category.name.lowercase().replaceFirstChar { it.uppercase() }) },
+                                    label = { Text(category.getDisplayName()) },
                                     colors = FilterChipDefaults.filterChipColors(
                                         selectedContainerColor = Color(0xFF5B4DBC),
                                         selectedLabelColor = Color.White
@@ -337,6 +276,10 @@ fun ExploreScreen(
                 }
             }
         }
+    }
+
+    LaunchedEffect(Unit) {
+        teachingCardViewModel.refreshTeachingCards()
     }
 }
 

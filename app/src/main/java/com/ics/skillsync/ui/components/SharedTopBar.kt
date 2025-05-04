@@ -28,7 +28,7 @@ import androidx.compose.ui.layout.ContentScale
 @Composable
 fun SharedTopBar(
     navController: NavController,
-    viewModel: ProfileViewModel,
+    viewModel: ProfileViewModel?,
     title: String,
     onDrawerOpen: () -> Unit
 ) {
@@ -162,6 +162,18 @@ fun SharedDrawerContent(
                 navController.navigate("search")
             }
         )
+
+        if (currentUser?.role == "Mentor" || currentUser?.role == "Ambos roles") {
+            NavigationDrawerItem(
+                icon = { Icon(Icons.Default.Assignment, contentDescription = "Mis Tarjetas") },
+                label = { Text("Mis Tarjetas") },
+                selected = false,
+                onClick = {
+                    scope.launch { onDrawerClose() }
+                    navController.navigate("my_teaching_cards")
+                }
+            )
+        }
         
         NavigationDrawerItem(
             icon = { Icon(Icons.Default.DateRange, contentDescription = "Sesiones") },

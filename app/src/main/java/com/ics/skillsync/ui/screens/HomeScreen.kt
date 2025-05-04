@@ -37,59 +37,40 @@ import com.ics.skillsync.ui.components.SharedBottomBar
 import com.ics.skillsync.ui.components.SharedNavigationDrawer
 import com.ics.skillsync.ui.components.SharedTopBar
 import com.ics.skillsync.ui.viewmodel.ProfileViewModel
+import com.ics.skillsync.ui.viewmodel.TeachingCardViewModel
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     navController: NavController,
-    viewModel: ProfileViewModel
+    viewModel: ProfileViewModel,
+    teachingCardViewModel: TeachingCardViewModel
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val categories = remember { SkillCategory.values().toList() }
     var selectedCategory by remember { mutableStateOf<SkillCategory?>(null) }
+    val teachingCards by teachingCardViewModel.teachingCards.collectAsState()
 
-    // Mostrar principales habilidades
-    val popularSkills = remember {
-        listOf(
+    // Convertir TeachingCards a Skills para mantener la compatibilidad
+    val popularSkills = remember(teachingCards) {
+        teachingCards.take(4).map { card ->
             Skill(
-                id = "1",
-                name = "Inglés Conversacional",
-                description = "Practica inglés con hablantes nativos y mejora tu fluidez, pronunciación y confianza al hablar.",
-                category = SkillCategory.IDIOMAS,
-                imageUrl = "https://images.unsplash.com/photo-1546410531-bb4caa6b424d?q=80&w=800&auto=format&fit=crop",
-                mentorsCount = 5,
-                learnersCount = 12
-            ),
-            Skill(
-                id = "4",
-                name = "Desarrollo Web Frontend",
-                description = "Aprende HTML, CSS, JavaScript y frameworks populares como React y Vue para crear sitios web interactivos.",
-                category = SkillCategory.TECNOLOGIA,
-                imageUrl = "https://images.unsplash.com/photo-1633356122544-f134324a6cee?q=80&w=800&auto=format&fit=crop",
-                mentorsCount = 8,
-                learnersCount = 20
-            ),
-            Skill(
-                id = "7",
-                name = "Guitarra Acústica",
-                description = "Aprende a tocar guitarra desde cero o mejora tus habilidades con técnicas avanzadas de rasgueo y punteo.",
-                category = SkillCategory.MUSICA,
-                imageUrl = "https://images.unsplash.com/photo-1525201548942-d8732f6617a0?q=80&w=800&auto=format&fit=crop",
-                mentorsCount = 4,
-                learnersCount = 12
-            ),
-            Skill(
-                id = "10",
-                name = "Dibujo Artístico",
-                description = "Aprende técnicas de dibujo, perspectiva y composición para crear obras de arte.",
-                category = SkillCategory.ARTE,
-                imageUrl = "https://images.unsplash.com/photo-1605721911519-3dfeb3be25e7?q=80&w=800&auto=format&fit=crop",
-                mentorsCount = 3,
-                learnersCount = 9
+                id = card.id,
+                name = card.title,
+                description = card.description,
+                category = SkillCategory.fromString(card.category),
+                imageUrl = card.imageUrl,
+                mentorsCount = 1, // Mantenemos esto ya que cada tarjeta tiene un mentor
+                learnersCount = card.learnerCount,
+                mentorName = card.mentorName
             )
-        )
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        teachingCardViewModel.refreshTeachingCards()
     }
 
     SharedNavigationDrawer(

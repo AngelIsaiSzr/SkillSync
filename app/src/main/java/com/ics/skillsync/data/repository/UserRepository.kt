@@ -115,7 +115,9 @@ class UserRepository(
                     email = userData["email"] as? String ?: "",
                     password = "", // No guardamos la contraseña en la base de datos local
                     role = userData["role"] as? String ?: "Ambos roles",
-                    photoUrl = firebaseUser.photoUrl?.toString() ?: ""
+                    photoUrl = firebaseUser.photoUrl?.toString() ?: "",
+                    biography = userData["biography"] as? String ?: "",
+                    availability = userData["availability"] as? String ?: ""
                 )
 
                 // Guardar en Room para acceso local

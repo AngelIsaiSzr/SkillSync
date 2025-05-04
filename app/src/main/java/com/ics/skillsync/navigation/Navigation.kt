@@ -8,6 +8,7 @@ import com.ics.skillsync.ui.screens.*
 import com.ics.skillsync.ui.viewmodel.ProfileViewModel
 import com.ics.skillsync.ui.viewmodel.SkillViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.ics.skillsync.ui.viewmodel.TeachingCardViewModel
 
 @Composable
 fun Navigation(
@@ -16,6 +17,7 @@ fun Navigation(
 ) {
     val profileViewModel: ProfileViewModel = viewModel()
     val skillViewModel: SkillViewModel = viewModel()
+    val teachingCardViewModel: TeachingCardViewModel = viewModel()
     
     NavHost(
         navController = navController,
@@ -26,10 +28,18 @@ fun Navigation(
         }
         
         composable("home") {
-            HomeScreen(navController = navController, viewModel = profileViewModel)
+            HomeScreen(
+                navController = navController,
+                viewModel = profileViewModel,
+                teachingCardViewModel = teachingCardViewModel
+            )
         }
         composable("explore") {
-            ExploreScreen(navController = navController, viewModel = profileViewModel)
+            ExploreScreen(
+                navController = navController,
+                viewModel = profileViewModel,
+                teachingCardViewModel = teachingCardViewModel
+            )
         }
         composable("chats") {
             ChatsScreen(navController = navController, viewModel = profileViewModel)
@@ -66,6 +76,26 @@ fun Navigation(
                 navController = navController,
                 skillViewModel = skillViewModel,
                 profileViewModel = profileViewModel
+            )
+        }
+        composable("my_teaching_cards") {
+            MyTeachingCardsScreen(
+                navController = navController,
+                viewModel = teachingCardViewModel,
+                profileViewModel = profileViewModel
+            )
+        }
+        composable("teaching_card/{cardId}") { backStackEntry ->
+            TeachingCardScreen(
+                navController = navController,
+                viewModel = teachingCardViewModel,
+                cardId = backStackEntry.arguments?.getString("cardId")
+            )
+        }
+        composable("create_teaching_card") {
+            TeachingCardScreen(
+                navController = navController,
+                viewModel = teachingCardViewModel
             )
         }
     }

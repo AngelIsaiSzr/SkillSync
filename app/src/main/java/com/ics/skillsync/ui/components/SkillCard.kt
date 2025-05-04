@@ -95,20 +95,20 @@ fun SkillCard(
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Group,
+                            imageVector = Icons.Default.Person,
                             contentDescription = null,
                             tint = Color(0xFF5B4DBC),
                             modifier = Modifier.size(16.dp)
                         )
                         Text(
-                            text = "${skill.mentorsCount} mentores disponibles",
+                            text = skill.mentorName.ifEmpty { "Sin mentor asignado" },
                             fontSize = 12.sp,
                             color = Color.Gray
                         )
@@ -118,7 +118,7 @@ fun SkillCard(
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Group,
+                            imageVector = Icons.Default.School,
                             contentDescription = null,
                             tint = Color(0xFF5B4DBC),
                             modifier = Modifier.size(16.dp)

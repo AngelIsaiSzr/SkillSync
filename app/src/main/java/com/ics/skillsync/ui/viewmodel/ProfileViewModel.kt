@@ -357,7 +357,7 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    // Nuevo método para guardar la foto de perfil en Firebase
+    // Nuevo metodo para guardar la foto de perfil en Firebase
     fun saveProfilePhoto(localImageUri: String) {
         viewModelScope.launch {
             try {
@@ -536,15 +536,14 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                 _skillCount.value = 0
 
                 // Obtener el conteo inicial directamente de Firestore
-                val initialCount = firestore.collection("users")
+                val skillsSnapshot = firestore.collection("users")
                     .document(userId)
                     .collection("skills")
                     .get()
                     .await()
-                    .size()
                 
                 // Establecer el conteo inicial
-                _skillCount.value = initialCount
+                _skillCount.value = skillsSnapshot.size()
 
                 // Agregar el nuevo listener
                 skillCountListener = firestore.collection("users")
@@ -557,11 +556,8 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                         }
 
                         if (snapshot != null) {
-                            // Solo actualizar si el valor es diferente
-                            val newCount = snapshot.size()
-                            if (newCount != _skillCount.value) {
-                                _skillCount.value = newCount
-                            }
+                            // Actualizar el conteo con el tamaño real de la colección
+                            _skillCount.value = snapshot.size()
                         }
                     }
             } catch (e: Exception) {

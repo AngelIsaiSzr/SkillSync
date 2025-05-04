@@ -3,9 +3,7 @@ package com.ics.skillsync.ui.viewmodel
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.ics.skillsync.data.database.AppDatabase
 import com.ics.skillsync.data.database.entity.Skill
-import com.ics.skillsync.data.repository.SkillRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import com.google.firebase.auth.FirebaseAuth
@@ -15,7 +13,6 @@ import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
 
 class SkillViewModel(application: Application) : AndroidViewModel(application) {
-    private val repository: SkillRepository
     private val _uiState = MutableStateFlow<UiState>(UiState.Initial)
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
@@ -33,6 +30,8 @@ class SkillViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _userRole = MutableStateFlow<UserRole>(UserRole.BOTH)
     val userRole: StateFlow<UserRole> = _userRole.asStateFlow()
+
+    private val firestore = FirebaseFirestore.getInstance()
 
     enum class UserRole {
         MENTOR, LEARNER, BOTH
@@ -55,9 +54,13 @@ class SkillViewModel(application: Application) : AndroidViewModel(application) {
     // Lista de habilidades predefinidas
     val predefinedSkills = listOf(
         "Programación",
+        "Edición de Vídeo",
         "Diseño gráfico",
         "Marketing digital",
         "Idiomas",
+        "Dibujo",
+        "Pintura",
+        "Canto",
         "Música",
         "Fotografía",
         "Cocina",
@@ -77,12 +80,6 @@ class SkillViewModel(application: Application) : AndroidViewModel(application) {
     )
 
     init {
-        val database = AppDatabase.getDatabase(application)
-        repository = SkillRepository(
-            skillDao = database.skillDao(),
-            application = application
-        )
-        
         viewModelScope.launch {
             delay(500)
             checkAuthState()
@@ -117,8 +114,7 @@ class SkillViewModel(application: Application) : AndroidViewModel(application) {
     private fun loadUserRole(userId: String) {
         viewModelScope.launch {
             try {
-                val userDoc = FirebaseFirestore.getInstance()
-                    .collection("users")
+                val userDoc = firestore.collection("users")
                     .document(userId)
                     .get()
                     .await()
@@ -152,57 +148,35 @@ class SkillViewModel(application: Application) : AndroidViewModel(application) {
         
         viewModelScope.launch {
             try {
-                // Primero sincronizamos con Firebase
-                repository.syncUserSkills(userId)
-                
-                // Limpiar habilidades duplicadas o incorrectas
-                cleanDuplicateSkills(userId)
-                
-                // Luego observamos los cambios en la base de datos local
-                repository.getUserSkills(userId).collect { skills ->
-                    _userSkills.value = skills
-                    _teachSkills.value = skills.filter { it.type == Skill.SkillType.TEACH }
-                    _learnSkills.value = skills.filter { it.type == Skill.SkillType.LEARN }
+                // Obtener habilidades directamente de Firestore
+                val skillsSnapshot = firestore.collection("users")
+                    .document(userId)
+                    .collection("skills")
+                    .get()
+                    .await()
+
+                val skills = skillsSnapshot.documents.mapNotNull { doc ->
+                    try {
+                        Skill(
+                            id = doc.id,
+                            userId = userId,
+                            name = doc.getString("name") ?: "",
+                            type = Skill.SkillType.valueOf(doc.getString("type") ?: "TEACH"),
+                            level = doc.getLong("level")?.toInt() ?: 1
+                        )
+                    } catch (e: Exception) {
+                        Log.e("SkillViewModel", "Error parsing skill document", e)
+                        null
+                    }
                 }
+
+                _userSkills.value = skills
+                _teachSkills.value = skills.filter { it.type == Skill.SkillType.TEACH }
+                _learnSkills.value = skills.filter { it.type == Skill.SkillType.LEARN }
             } catch (e: Exception) {
                 Log.e("SkillViewModel", "Error loading skills", e)
                 _uiState.value = UiState.Error("Error al cargar las habilidades: ${e.message}")
             }
-        }
-    }
-
-    private suspend fun cleanDuplicateSkills(userId: String) {
-        try {
-            // Obtener todas las habilidades de Firestore
-            val firestoreSkills = FirebaseFirestore.getInstance()
-                .collection("users")
-                .document(userId)
-                .collection("skills")
-                .get()
-                .await()
-
-            // Eliminar todas las habilidades existentes
-            firestoreSkills.documents.forEach { doc ->
-                doc.reference.delete().await()
-            }
-
-            // Volver a agregar las habilidades correctas desde la base de datos local
-            val localSkills = repository.getUserSkills(userId).first()
-            localSkills.forEach { skill ->
-                FirebaseFirestore.getInstance()
-                    .collection("users")
-                    .document(userId)
-                    .collection("skills")
-                    .document()
-                    .set(mapOf(
-                        "name" to skill.name,
-                        "type" to skill.type,
-                        "level" to skill.level
-                    ))
-                    .await()
-            }
-        } catch (e: Exception) {
-            Log.e("SkillViewModel", "Error cleaning duplicate skills", e)
         }
     }
 
@@ -216,29 +190,23 @@ class SkillViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             _uiState.value = UiState.Loading
             try {
-                repository.addSkill(userId, name, type, level).fold(
-                    onSuccess = {
-                        // Actualizar la colección de skills del usuario en Firestore
-                        FirebaseFirestore.getInstance()
-                            .collection("users")
-                            .document(userId)
-                            .collection("skills")
-                            .document()
-                            .set(mapOf(
-                                "name" to name,
-                                "type" to type,
-                                "level" to level
-                            ))
-                            .await()
-                            
-                        _uiState.value = UiState.Success("Habilidad agregada correctamente")
-                        // Recargar las habilidades después de agregar
-                        loadUserSkills()
-                    },
-                    onFailure = {
-                        _uiState.value = UiState.Error(it.message ?: "Error al agregar la habilidad")
-                    }
+                // Agregar habilidad directamente a Firestore
+                val skillRef = firestore.collection("users")
+                    .document(userId)
+                    .collection("skills")
+                    .document()
+
+                val skill = hashMapOf(
+                    "name" to name,
+                    "type" to type.name,
+                    "level" to level
                 )
+
+                skillRef.set(skill).await()
+                            
+                _uiState.value = UiState.Success("Habilidad agregada correctamente")
+                // Recargar las habilidades después de agregar
+                loadUserSkills()
             } catch (e: Exception) {
                 Log.e("SkillViewModel", "Error adding skill", e)
                 _uiState.value = UiState.Error("Error al agregar la habilidad: ${e.message}")
@@ -256,31 +224,17 @@ class SkillViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             _uiState.value = UiState.Loading
             try {
-                repository.deleteSkill(skill).fold(
-                    onSuccess = {
-                        // Eliminar también de la colección de skills del usuario en Firestore
-                        FirebaseFirestore.getInstance()
-                            .collection("users")
-                            .document(userId)
-                            .collection("skills")
-                            .whereEqualTo("name", skill.name)
-                            .whereEqualTo("type", skill.type)
-                            .whereEqualTo("level", skill.level)
-                            .get()
-                            .await()
-                            .documents
-                            .forEach { doc ->
-                                doc.reference.delete().await()
-                            }
+                // Eliminar habilidad directamente de Firestore
+                firestore.collection("users")
+                    .document(userId)
+                    .collection("skills")
+                    .document(skill.id)
+                    .delete()
+                    .await()
                             
-                        _uiState.value = UiState.Success("Habilidad eliminada correctamente")
-                        // Recargar las habilidades después de eliminar
-                        loadUserSkills()
-                    },
-                    onFailure = {
-                        _uiState.value = UiState.Error(it.message ?: "Error al eliminar la habilidad")
-                    }
-                )
+                _uiState.value = UiState.Success("Habilidad eliminada correctamente")
+                // Recargar las habilidades después de eliminar
+                loadUserSkills()
             } catch (e: Exception) {
                 Log.e("SkillViewModel", "Error deleting skill", e)
                 _uiState.value = UiState.Error("Error al eliminar la habilidad: ${e.message}")
