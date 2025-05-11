@@ -170,9 +170,9 @@ class SkillViewModel(application: Application) : AndroidViewModel(application) {
                     }
                 }
 
-                _userSkills.value = skills
-                _teachSkills.value = skills.filter { it.type == Skill.SkillType.TEACH }
-                _learnSkills.value = skills.filter { it.type == Skill.SkillType.LEARN }
+                    _userSkills.value = skills
+                    _teachSkills.value = skills.filter { it.type == Skill.SkillType.TEACH }
+                    _learnSkills.value = skills.filter { it.type == Skill.SkillType.LEARN }
             } catch (e: Exception) {
                 Log.e("SkillViewModel", "Error loading skills", e)
                 _uiState.value = UiState.Error("Error al cargar las habilidades: ${e.message}")
@@ -192,21 +192,21 @@ class SkillViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 // Agregar habilidad directamente a Firestore
                 val skillRef = firestore.collection("users")
-                    .document(userId)
-                    .collection("skills")
-                    .document()
+                            .document(userId)
+                            .collection("skills")
+                            .document()
 
                 val skill = hashMapOf(
-                    "name" to name,
+                                "name" to name,
                     "type" to type.name,
-                    "level" to level
+                                "level" to level
                 )
 
                 skillRef.set(skill).await()
                             
-                _uiState.value = UiState.Success("Habilidad agregada correctamente")
-                // Recargar las habilidades después de agregar
-                loadUserSkills()
+                        _uiState.value = UiState.Success("Habilidad agregada correctamente")
+                        // Recargar las habilidades después de agregar
+                        loadUserSkills()
             } catch (e: Exception) {
                 Log.e("SkillViewModel", "Error adding skill", e)
                 _uiState.value = UiState.Error("Error al agregar la habilidad: ${e.message}")
@@ -226,15 +226,15 @@ class SkillViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 // Eliminar habilidad directamente de Firestore
                 firestore.collection("users")
-                    .document(userId)
-                    .collection("skills")
+                            .document(userId)
+                            .collection("skills")
                     .document(skill.id)
                     .delete()
-                    .await()
+                            .await()
                             
-                _uiState.value = UiState.Success("Habilidad eliminada correctamente")
-                // Recargar las habilidades después de eliminar
-                loadUserSkills()
+                        _uiState.value = UiState.Success("Habilidad eliminada correctamente")
+                        // Recargar las habilidades después de eliminar
+                        loadUserSkills()
             } catch (e: Exception) {
                 Log.e("SkillViewModel", "Error deleting skill", e)
                 _uiState.value = UiState.Error("Error al eliminar la habilidad: ${e.message}")
