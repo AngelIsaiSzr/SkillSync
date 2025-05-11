@@ -45,10 +45,13 @@ import androidx.compose.material3.DrawerState
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ics.skillsync.model.Skill
 import com.ics.skillsync.ui.viewmodel.SkillViewModel
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
 import androidx.compose.runtime.collectAsState
 import com.ics.skillsync.ui.viewmodel.EnrollmentViewModel
+import com.ics.skillsync.ui.viewmodel.ChatViewModel
+import kotlinx.coroutines.CoroutineScope
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -58,7 +61,8 @@ fun SkillDetailScreen(
     teachingCardViewModel: TeachingCardViewModel,
     profileViewModel: ProfileViewModel = viewModel(),
     skillViewModel: SkillViewModel = viewModel(),
-    enrollmentViewModel: EnrollmentViewModel = viewModel()
+    enrollmentViewModel: EnrollmentViewModel = viewModel(),
+    chatViewModel: ChatViewModel = viewModel()
 ) {
     var card by remember { mutableStateOf<TeachingCard?>(null) }
     var isLoading by remember { mutableStateOf(true) }
@@ -315,7 +319,15 @@ fun SkillDetailScreen(
                             )
                             // Contenido de tabs
                             when (selectedTab) {
-                                0 -> MentorCommunityCard(card = c, mentorSkills = mentorSkills)
+                                0 -> MentorCommunityCard(
+                                    card = c, 
+                                    mentorSkills = mentorSkills,
+                                    currentUser = currentUser,
+                                    snackbarHostState = snackbarHostState,
+                                    scope = scope,
+                                    chatViewModel = chatViewModel,
+                                    navController = navController
+                                )
                                 1 -> LearnerCommunityCard(card = c, enrollmentViewModel = enrollmentViewModel)
                             }
                         }
@@ -429,7 +441,15 @@ private fun TabWeb(text: String, selected: Boolean, onClick: () -> Unit, left: B
 }
 
 @Composable
-private fun MentorCommunityCard(card: TeachingCard, mentorSkills: List<com.ics.skillsync.data.database.entity.Skill>) {
+private fun MentorCommunityCard(
+    card: TeachingCard, 
+    mentorSkills: List<com.ics.skillsync.data.database.entity.Skill>,
+    currentUser: com.ics.skillsync.data.database.entity.User?,
+    snackbarHostState: SnackbarHostState,
+    scope: CoroutineScope,
+    chatViewModel: ChatViewModel,
+    navController: NavController
+) {
     var mentorBio by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(true) }
 
@@ -528,7 +548,28 @@ private fun MentorCommunityCard(card: TeachingCard, mentorSkills: List<com.ics.s
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     OutlinedButton(
-                        onClick = { /* TODO: Mensaje */ },
+                        onClick = { 
+                            if (currentUser?.id == card.mentorId) {
+                                scope.launch {
+                                    snackbarHostState.showSnackbar(
+                                        message = "No puedes enviarte mensajes a ti mismo",
+                                        duration = SnackbarDuration.Short
+                                    )
+                                }
+                            } else {
+                                scope.launch {
+                                    try {
+                                        val chatId = chatViewModel.getOrCreateChat(card.mentorId)
+                                        navController.navigate("chat/$chatId")
+                                    } catch (e: Exception) {
+                                        snackbarHostState.showSnackbar(
+                                            message = "Error al iniciar el chat: ${e.message}",
+                                            duration = SnackbarDuration.Short
+                                        )
+                                    }
+                                }
+                            }
+                        },
                         modifier = Modifier
                             .widthIn(max = 260.dp)
                             .padding(top = 8.dp),
@@ -559,7 +600,7 @@ private fun MentorCommunityCard(card: TeachingCard, mentorSkills: List<com.ics.s
 @Composable
 private fun LearnerCommunityCard(
     card: TeachingCard,
-    enrollmentViewModel: EnrollmentViewModel = viewModel()
+    enrollmentViewModel: EnrollmentViewModel
 ) {
     val learners by enrollmentViewModel.learners.collectAsState()
     var isLoading by remember { mutableStateOf(true) }
@@ -630,10 +671,15 @@ private fun LearnerCommunityCard(
                                     shape = CircleShape,
                                     color = Color(0xFFE0E7FF)
                                 ) {
+                                    val initials = learner.userName
+                                        .split(" ")
+                                        .filter { it.isNotBlank() }
+                                        .take(2)
+                                        .map { it.firstOrNull()?.toString() ?: "" }
+                                        .joinToString("")
+                                        .ifBlank { "?" }
                                     Text(
-                                        text = learner.userName.split(" ")
-                                            .take(2)
-                                            .joinToString("") { it.first().toString() },
+                                        text = initials,
                                         color = Color(0xFF5B4DBC),
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 18.sp,

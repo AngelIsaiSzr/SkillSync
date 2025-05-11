@@ -8,7 +8,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.Message
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -28,85 +29,50 @@ import java.text.SimpleDateFormat
 import java.util.*
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ics.skillsync.R
-import com.ics.skillsync.ui.viewmodel.ProfileViewModel
+import com.ics.skillsync.model.Chat
 import com.ics.skillsync.ui.components.SharedNavigationDrawer
 import com.ics.skillsync.ui.components.SharedTopBar
 import com.ics.skillsync.ui.components.SharedBottomBar
+import com.ics.skillsync.ui.viewmodel.ChatViewModel
+import com.ics.skillsync.ui.viewmodel.ProfileViewModel
 import kotlin.system.exitProcess
-
-data class ChatMessage(
-    val id: String,
-    val senderName: String,
-    val lastMessage: String,
-    val timestamp: Date,
-    val unreadCount: Int = 0,
-    val isOnline: Boolean = false,
-    val profileImage: String = "https://i.pravatar.cc/150?img="
-)
+import androidx.compose.material.icons.filled.Person
+import com.ics.skillsync.data.database.entity.User as FirestoreUser
+import com.google.firebase.auth.FirebaseAuth
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatsScreen(
     navController: NavController,
-    viewModel: ProfileViewModel
+    profileViewModel: ProfileViewModel,
+    chatViewModel: ChatViewModel = viewModel()
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     var searchQuery by remember { mutableStateOf("") }
-    val isAuthenticated by viewModel.isAuthenticated.collectAsState()
+    val isAuthenticated by profileViewModel.isAuthenticated.collectAsState()
+    val chats by chatViewModel.chats.collectAsState()
+    val isLoading by chatViewModel.isLoading.collectAsState()
     
-    // Datos de ejemplo
-    val chats = remember {
-        listOf(
-            ChatMessage(
-                "1",
-                "María García",
-                "¡Hola! ¿Te gustaría unirte a mi grupo de estudio?",
-                Date(System.currentTimeMillis() - 3600000),
-                0,
-                true,
-                "https://i.pravatar.cc/150?img=1"
-            ),
-            ChatMessage(
-                "2",
-                "Carlos Rodríguez",
-                "¿Podrías ayudarme con la tarea de matemáticas?",
-                Date(System.currentTimeMillis() - 7200000),
-                0,
-                false,
-                "https://i.pravatar.cc/150?img=2"
-            ),
-            ChatMessage(
-                "3",
-                "Ana Martínez",
-                "¡Excelente trabajo en el proyecto!",
-                Date(System.currentTimeMillis() - 86400000),
-                0,
-                true,
-                "https://i.pravatar.cc/150?img=3"
-            ),
-            ChatMessage(
-                "4",
-                "Pedro Sánchez",
-                "¿Cuándo es la próxima reunión?",
-                Date(System.currentTimeMillis() - 172800000),
-                0,
-                false,
-                "https://i.pravatar.cc/150?img=4"
-            )
-        )
+    LaunchedEffect(Unit) {
+        chatViewModel.startChatsListener()
+    }
+    DisposableEffect(Unit) {
+        onDispose {
+            chatViewModel.stopChatsListener()
+        }
     }
     
     SharedNavigationDrawer(
         navController = navController,
-        viewModel = viewModel,
+        viewModel = profileViewModel,
         drawerState = drawerState
     ) {
         Scaffold(
             topBar = {
                 SharedTopBar(
                     navController = navController,
-                    viewModel = viewModel,
+                    viewModel = profileViewModel,
                     title = "SkillSync",
                     onDrawerOpen = {
                         scope.launch { drawerState.open() }
@@ -129,7 +95,7 @@ fun ChatsScreen(
                     verticalArrangement = Arrangement.Center
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Message,
+                        imageVector = Icons.AutoMirrored.Filled.Message,
                         contentDescription = null,
                         modifier = Modifier.size(120.dp),
                         tint = Color(0xFF5B4DBC)
@@ -178,7 +144,7 @@ fun ChatsScreen(
                         placeholder = { Text("Buscar chats...") },
                         leadingIcon = {
                             Icon(
-                                imageVector = Icons.Default.Search,
+                                imageVector = Icons.Filled.Search,
                                 contentDescription = "Buscar",
                                 tint = Color.Gray
                             )
@@ -193,16 +159,64 @@ fun ChatsScreen(
                         singleLine = true
                     )
 
-                    // Lista de chats
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(vertical = 8.dp)
-                    ) {
-                        items(chats) { chat ->
-                            ChatItem(
-                                chat = chat,
-                                onClick = { navController.navigate("chat/${chat.id}") }
+                    if (isLoading) {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(
+                                color = Color(0xFF5B4DBC)
                             )
+                        }
+                    } else {
+                        // Lista de chats
+                        if (chats.isEmpty()) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(32.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.Message,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(80.dp),
+                                        tint = Color(0xFF5B4DBC)
+                                    )
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    Text(
+                                        text = "No hay chats para mostrar",
+                                        fontSize = 18.sp,
+                                        textAlign = TextAlign.Center,
+                                        color = Color(0xFF111827),
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        text = "Explora habilidades y comienza a chatear con mentores y aprendices",
+                                        fontSize = 14.sp,
+                                        textAlign = TextAlign.Center,
+                                        color = Color(0xFF6B7280)
+                                    )
+                                }
+                            }
+                        } else {
+                            LazyColumn(
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = PaddingValues(vertical = 8.dp)
+                            ) {
+                                items(chats) { chat ->
+                                    ChatItem(
+                                        chat = chat,
+                                        onClick = { navController.navigate("chat/${chat.id}") },
+                                        chatViewModel = chatViewModel
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -213,11 +227,21 @@ fun ChatsScreen(
 
 @Composable
 fun ChatItem(
-    chat: ChatMessage,
-    onClick: () -> Unit
+    chat: Chat,
+    onClick: () -> Unit,
+    chatViewModel: ChatViewModel = viewModel()
 ) {
-    val dateFormat = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
-    
+    val currentUser = FirebaseAuth.getInstance().currentUser
+    val otherUserId = chat.participants.firstOrNull { it != currentUser?.uid } ?: ""
+    val otherUsers by chatViewModel.otherUsers.collectAsState()
+    LaunchedEffect(otherUserId) {
+        if (otherUserId.isNotEmpty()) chatViewModel.fetchOtherUser(otherUserId)
+    }
+    val user: FirestoreUser? = otherUsers[otherUserId]
+    val name = listOfNotNull(user?.firstName, user?.lastName).joinToString(" ").ifBlank { "Usuario" }
+    val photoUrl = user?.photoUrl
+    val dateFormat = remember { SimpleDateFormat("hh:mm a", Locale.getDefault()) }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -237,34 +261,28 @@ fun ChatItem(
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Avatar con indicador de estado
             Box(
                 modifier = Modifier
                     .size(60.dp)
                     .clip(CircleShape)
             ) {
-                AsyncImage(
-                    model = chat.profileImage,
-                    contentDescription = "Foto de perfil de ${chat.senderName}",
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
-                
-                // Indicador de estado online
-                if (chat.isOnline) {
-                    Box(
-                        modifier = Modifier
-                            .size(14.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFF22C55E))
-                            .align(Alignment.BottomEnd)
+                if (!photoUrl.isNullOrBlank()) {
+                    AsyncImage(
+                        model = photoUrl,
+                        contentDescription = "Foto de perfil",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.Person,
+                        contentDescription = "Sin foto",
+                        modifier = Modifier.fillMaxSize(),
+                        tint = Color.Gray
                     )
                 }
             }
-
             Spacer(modifier = Modifier.width(16.dp))
-
-            // Contenido del chat
             Column(
                 modifier = Modifier.weight(1f)
             ) {
@@ -274,20 +292,18 @@ fun ChatItem(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = chat.senderName,
+                        text = name,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFF111827)
                     )
                     Text(
-                        text = dateFormat.format(chat.timestamp),
+                        text = dateFormat.format(chat.lastMessageTimestamp),
                         fontSize = 12.sp,
                         color = Color(0xFF6B7280)
                     )
                 }
-
                 Spacer(modifier = Modifier.height(4.dp))
-
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -299,7 +315,6 @@ fun ChatItem(
                         color = Color(0xFF6B7280),
                         maxLines = 1
                     )
-                    
                     if (chat.unreadCount > 0) {
                         Box(
                             modifier = Modifier
