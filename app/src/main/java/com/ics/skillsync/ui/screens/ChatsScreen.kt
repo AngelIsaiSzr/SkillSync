@@ -169,7 +169,7 @@ fun ChatsScreen(
                             )
                         }
                     } else {
-                        // Lista de chats
+                    // Lista de chats
                         if (chats.isEmpty()) {
                             Box(
                                 modifier = Modifier
@@ -205,16 +205,16 @@ fun ChatsScreen(
                                 }
                             }
                         } else {
-                            LazyColumn(
-                                modifier = Modifier.fillMaxSize(),
-                                contentPadding = PaddingValues(vertical = 8.dp)
-                            ) {
-                                items(chats) { chat ->
-                                    ChatItem(
-                                        chat = chat,
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(vertical = 8.dp)
+                    ) {
+                        items(chats) { chat ->
+                            ChatItem(
+                                chat = chat,
                                         onClick = { navController.navigate("chat/${chat.id}") },
                                         chatViewModel = chatViewModel
-                                    )
+                            )
                                 }
                             }
                         }
@@ -232,7 +232,8 @@ fun ChatItem(
     chatViewModel: ChatViewModel = viewModel()
 ) {
     val currentUser = FirebaseAuth.getInstance().currentUser
-    val otherUserId = chat.participants.firstOrNull { it != currentUser?.uid } ?: ""
+    val currentUserId = currentUser?.uid
+    val otherUserId = chat.participants.firstOrNull { it != currentUserId } ?: ""
     val otherUsers by chatViewModel.otherUsers.collectAsState()
     LaunchedEffect(otherUserId) {
         if (otherUserId.isNotEmpty()) chatViewModel.fetchOtherUser(otherUserId)
@@ -241,7 +242,8 @@ fun ChatItem(
     val name = listOfNotNull(user?.firstName, user?.lastName).joinToString(" ").ifBlank { "Usuario" }
     val photoUrl = user?.photoUrl
     val dateFormat = remember { SimpleDateFormat("hh:mm a", Locale.getDefault()) }
-
+    val unreadCount = chat.unreadCounts[currentUserId] ?: 0
+    
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -263,22 +265,31 @@ fun ChatItem(
         ) {
             Box(
                 modifier = Modifier
-                    .size(60.dp)
+                    .size(56.dp)
                     .clip(CircleShape)
+                    .background(Color(0xFF5B4DBC))
             ) {
                 if (!photoUrl.isNullOrBlank()) {
-                    AsyncImage(
+                AsyncImage(
                         model = photoUrl,
                         contentDescription = "Foto de perfil",
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
-                    )
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
                 } else {
-                    Icon(
-                        imageVector = Icons.Default.Person,
-                        contentDescription = "Sin foto",
-                        modifier = Modifier.fillMaxSize(),
-                        tint = Color.Gray
+                    val initials = name
+                        .split(" ")
+                        .filter { it.isNotBlank() }
+                        .take(2)
+                        .map { it.firstOrNull()?.toString() ?: "" }
+                        .joinToString("")
+                        .ifBlank { "?" }
+                    Text(
+                        text = initials,
+                        color = Color(0xFFFFFFFFF),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 20.sp,
+                        modifier = Modifier.align(Alignment.Center)
                     )
                 }
             }
@@ -315,16 +326,17 @@ fun ChatItem(
                         color = Color(0xFF6B7280),
                         maxLines = 1
                     )
-                    if (chat.unreadCount > 0) {
+                    if (unreadCount > 0) {
                         Box(
                             modifier = Modifier
+                                .size(26.dp)
                                 .clip(CircleShape)
-                                .background(Color(0xFF5B4DBC))
-                                .padding(horizontal = 8.dp, vertical = 2.dp)
+                                .background(Color(0xFF5B4DBC)),
+                            contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = chat.unreadCount.toString(),
-                                fontSize = 12.sp,
+                                text = unreadCount.toString(),
+                                fontSize = 10.sp,
                                 color = Color.White,
                                 fontWeight = FontWeight.Bold
                             )

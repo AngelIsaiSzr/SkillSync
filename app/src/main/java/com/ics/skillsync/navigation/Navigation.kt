@@ -48,7 +48,7 @@ fun Navigation(
                 )
             } else {
                 NoInternetScreen()
-            }
+        }
         }
         
         composable("explore") {
@@ -60,7 +60,7 @@ fun Navigation(
                 )
             } else {
                 NoInternetScreen()
-            }
+        }
         }
         
         composable("chats") {
@@ -101,11 +101,11 @@ fun Navigation(
         
         composable("skill/{cardId}") { backStackEntry ->
             if (isConnected) {
-                SkillDetailScreen(
+            SkillDetailScreen(
                     cardId = backStackEntry.arguments?.getString("cardId") ?: "",
                     navController = navController,
                     teachingCardViewModel = teachingCardViewModel
-                )
+            )
             } else {
                 NoInternetScreen()
             }
@@ -113,11 +113,11 @@ fun Navigation(
         
         composable("skills") {
             if (isConnected) {
-                SkillsScreen(
-                    navController = navController,
-                    skillViewModel = skillViewModel,
-                    profileViewModel = profileViewModel
-                )
+            SkillsScreen(
+                navController = navController,
+                skillViewModel = skillViewModel,
+                profileViewModel = profileViewModel
+            )
             } else {
                 NoInternetScreen()
             }

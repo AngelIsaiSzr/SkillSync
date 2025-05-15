@@ -451,9 +451,10 @@ private fun MentorCommunityCard(
     navController: NavController
 ) {
     var mentorBio by remember { mutableStateOf("") }
+    var mentorPhotoUrl by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(true) }
 
-    // Efecto para cargar la biografía del mentor
+    // Efecto para cargar la biografía y foto del mentor
     LaunchedEffect(card.mentorId) {
         isLoading = true
         try {
@@ -464,9 +465,11 @@ private fun MentorCommunityCard(
                 .await()
             
             mentorBio = mentorDoc.getString("biography") ?: ""
+            mentorPhotoUrl = mentorDoc.getString("photoUrl") ?: ""
         } catch (e: Exception) {
-            // Manejar el error silenciosamente y usar la biografía de la tarjeta como respaldo
+            // Manejar el error silenciosamente y usar los valores de la tarjeta como respaldo
             mentorBio = card.mentorBio
+            mentorPhotoUrl = card.mentorPhotoUrl
         }
         isLoading = false
     }
@@ -496,9 +499,9 @@ private fun MentorCommunityCard(
                     .padding(16.dp)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (card.mentorPhotoUrl.isNotEmpty()) {
+                    if (mentorPhotoUrl.isNotEmpty()) {
                         AsyncImage(
-                            model = card.mentorPhotoUrl,
+                            model = mentorPhotoUrl,
                             contentDescription = "Foto del mentor",
                             modifier = Modifier
                                 .size(48.dp)
@@ -543,53 +546,58 @@ private fun MentorCommunityCard(
                     fontSize = 15.sp
                 )
                 Spacer(modifier = Modifier.height(10.dp))
-                Row(
+                Box(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    contentAlignment = Alignment.Center
                 ) {
-                    OutlinedButton(
-                        onClick = { 
-                            if (currentUser?.id == card.mentorId) {
-                                scope.launch {
-                                    snackbarHostState.showSnackbar(
-                                        message = "No puedes enviarte mensajes a ti mismo",
-                                        duration = SnackbarDuration.Short
-                                    )
-                                }
-                            } else {
-                                scope.launch {
-                                    try {
-                                        val chatId = chatViewModel.getOrCreateChat(card.mentorId)
-                                        navController.navigate("chat/$chatId")
-                                    } catch (e: Exception) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = {
+                                if (currentUser?.id == card.mentorId) {
+                                    scope.launch {
                                         snackbarHostState.showSnackbar(
-                                            message = "Error al iniciar el chat: ${e.message}",
+                                            message = "No puedes enviarte mensajes a ti mismo",
                                             duration = SnackbarDuration.Short
                                         )
                                     }
+                                } else {
+                                    scope.launch {
+                                        try {
+                                            val chatId = chatViewModel.getOrCreateChat(card.mentorId)
+                                            navController.navigate("chat/$chatId")
+                                        } catch (e: Exception) {
+                                            snackbarHostState.showSnackbar(
+                                                message = "Error al iniciar el chat: ${e.message}",
+                                                duration = SnackbarDuration.Short
+                                            )
+                                        }
+                                    }
                                 }
-                            }
-                        },
-                        modifier = Modifier
-                            .widthIn(max = 260.dp)
-                            .padding(top = 8.dp),
-                        border = BorderStroke(1.dp, Color(0xFF5B4DBC)),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF5B4DBC))
-                    ) {
-                        Icon(Icons.Default.Message, contentDescription = null)
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Mensaje")
-                    }
-                    Button(
-                        onClick = { /* TODO: Programar */ },
-                        modifier = Modifier
-                            .widthIn(max = 260.dp)
-                            .padding(top = 8.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF5B4DBC))
-                    ) {
-                        Icon(Icons.Default.CalendarMonth, contentDescription = null)
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Programar")
+                            },
+                            modifier = Modifier
+                                .widthIn(max = 260.dp)
+                                .padding(top = 8.dp),
+                            border = BorderStroke(1.dp, Color(0xFF5B4DBC)),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF5B4DBC))
+                        ) {
+                            Icon(Icons.Default.Message, contentDescription = null)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Mensaje")
+                        }
+
+                        Button(
+                            onClick = { /* TODO: Programar */ },
+                            modifier = Modifier
+                                .widthIn(max = 260.dp)
+                                .padding(top = 8.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF5B4DBC))
+                        ) {
+                            Icon(Icons.Default.CalendarMonth, contentDescription = null)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Programar")
+                        }
                     }
                 }
             }

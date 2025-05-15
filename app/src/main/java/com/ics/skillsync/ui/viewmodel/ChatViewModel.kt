@@ -152,4 +152,28 @@ class ChatViewModel : ViewModel() {
         chatsListenerJob?.cancel()
         chatsListenerJob = null
     }
+
+    fun markMessagesAsRead(chatId: String, userId: String) {
+        viewModelScope.launch {
+            try {
+                repository.markMessagesAsRead(chatId, userId)
+            } catch (e: Exception) {
+                _error.value = e.message
+            }
+        }
+    }
+
+    fun deleteChat(chatId: String) {
+        viewModelScope.launch {
+            try {
+                repository.deleteChat(chatId)
+                // Limpiar los mensajes del chat actual
+                _messages.value = emptyList()
+                // Actualizar la lista de chats inmediatamente
+                _chats.value = _chats.value.filter { it.id != chatId }
+            } catch (e: Exception) {
+                _error.value = e.message
+            }
+        }
+    }
 } 

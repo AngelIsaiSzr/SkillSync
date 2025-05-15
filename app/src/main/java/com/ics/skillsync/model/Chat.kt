@@ -7,6 +7,6 @@ data class Chat(
     val participants: List<String> = emptyList(), // IDs de los usuarios
     val lastMessage: String = "",
     val lastMessageTimestamp: Date = Date(),
-    val unreadCount: Int = 0,
+    val unreadCounts: Map<String, Int> = emptyMap(), // userId -> count
     val createdAt: Date = Date()
 ) 

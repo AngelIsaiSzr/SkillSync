@@ -80,11 +80,23 @@ class ChatRepository {
             
             messageRef.set(message.copy(id = messageRef.id)).await()
             
-            // Actualizar último mensaje en el chat
+            // Obtener participantes y contadores actuales
+            val chatDoc = chatsCollection.document(chatId).get().await()
+            val chatData = chatDoc.data
+            val participants = chatData?.get("participants") as? List<String> ?: emptyList()
+            val unreadCounts = (chatData?.get("unreadCounts") as? Map<String, Long>)?.mapValues { it.value.toInt() }?.toMutableMap() ?: mutableMapOf()
+            // Incrementar el contador para todos los participantes excepto el remitente
+            participants.forEach { userId ->
+                if (userId != senderId) {
+                    unreadCounts[userId] = (unreadCounts[userId] ?: 0) + 1
+                }
+            }
+            // Actualizar último mensaje y contadores en el chat
             chatsCollection.document(chatId).update(
                 mapOf(
                     "lastMessage" to content,
-                    "lastMessageTimestamp" to Date()
+                    "lastMessageTimestamp" to Date(),
+                    "unreadCounts" to unreadCounts
                 )
             ).await()
         } catch (e: Exception) {
@@ -105,10 +117,38 @@ class ChatRepository {
                 doc.reference.update("isRead", true).await()
             }
 
-            // Actualizar contador de mensajes no leídos
-            chatsCollection.document(chatId).update("unreadCount", 0).await()
+            // Actualizar solo el contador de este usuario
+            val chatDoc = chatsCollection.document(chatId).get().await()
+            val chatData = chatDoc.data
+            val unreadCounts = (chatData?.get("unreadCounts") as? Map<String, Long>)?.mapValues { it.value.toInt() }?.toMutableMap() ?: mutableMapOf()
+            unreadCounts[userId] = 0
+            chatsCollection.document(chatId).update("unreadCounts", unreadCounts).await()
         } catch (e: Exception) {
             throw Exception("Error al marcar mensajes como leídos: ${e.message}")
+        }
+    }
+
+    suspend fun deleteChat(chatId: String) {
+        try {
+            // Eliminar todos los mensajes del chat
+            val messages = messagesCollection
+                .whereEqualTo("chatId", chatId)
+                .get()
+                .await()
+            
+            // Crear un batch para eliminar todos los mensajes
+            val batch = db.batch()
+            messages.documents.forEach { doc ->
+                batch.delete(doc.reference)
+            }
+            
+            // Eliminar el chat
+            batch.delete(chatsCollection.document(chatId))
+            
+            // Ejecutar todas las operaciones en una sola transacción
+            batch.commit().await()
+        } catch (e: Exception) {
+            throw Exception("Error al eliminar el chat: ${e.message}")
         }
     }
 } 
