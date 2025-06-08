@@ -77,6 +77,8 @@ fun ProfileScreen(
             delay(300)
             scope.launch {
                 scrollState.animateScrollTo(0, animationSpec = tween(500))
+                // Forzar actualización del contador cuando se restablece la conexión
+                viewModel.refreshSkillCount()
             }
         }
     }
@@ -84,6 +86,8 @@ fun ProfileScreen(
     // Efecto para cargar el estado de verificación
     LaunchedEffect(Unit) {
         viewModel.checkVerificationStatus()
+        // También actualizar el contador al montar el componente
+        viewModel.refreshSkillCount()
     }
 
     // Estados de validación
@@ -429,7 +433,8 @@ fun ProfileScreen(
                                         colors = OutlinedTextFieldDefaults.colors(
                                             unfocusedBorderColor = Color.LightGray,
                                             focusedBorderColor = Color(0xFF5B4DBC)
-                                        )
+                                        ),
+                                        singleLine = true
                                     )
 
                                     OutlinedTextField(
@@ -455,7 +460,8 @@ fun ProfileScreen(
                                         colors = OutlinedTextFieldDefaults.colors(
                                             unfocusedBorderColor = Color.LightGray,
                                             focusedBorderColor = Color(0xFF5B4DBC)
-                                        )
+                                        ),
+                                        singleLine = true
                                     )
 
                                     Box(
@@ -521,7 +527,8 @@ fun ProfileScreen(
                                             colors = OutlinedTextFieldDefaults.colors(
                                                 unfocusedBorderColor = Color.LightGray,
                                                 focusedBorderColor = Color(0xFF5B4DBC)
-                                            )
+                                            ),
+                                            singleLine = true
                                         )
                                         OutlinedTextField(
                                             value = lastName,
@@ -536,7 +543,8 @@ fun ProfileScreen(
                                             colors = OutlinedTextFieldDefaults.colors(
                                                 unfocusedBorderColor = Color.LightGray,
                                                 focusedBorderColor = Color(0xFF5B4DBC)
-                                            )
+                                            ),
+                                            singleLine = true
                                         )
                                     }
 
@@ -553,7 +561,8 @@ fun ProfileScreen(
                                         colors = OutlinedTextFieldDefaults.colors(
                                             unfocusedBorderColor = Color.LightGray,
                                             focusedBorderColor = Color(0xFF5B4DBC)
-                                        )
+                                        ),
+                                        singleLine = true
                                     )
 
                                     OutlinedTextField(
@@ -570,7 +579,8 @@ fun ProfileScreen(
                                         colors = OutlinedTextFieldDefaults.colors(
                                             unfocusedBorderColor = Color.LightGray,
                                             focusedBorderColor = Color(0xFF5B4DBC)
-                                        )
+                                        ),
+                                        singleLine = true
                                     )
 
                                     ExposedDropdownMenuBox(
@@ -631,7 +641,8 @@ fun ProfileScreen(
                                         colors = OutlinedTextFieldDefaults.colors(
                                             unfocusedBorderColor = Color.LightGray,
                                             focusedBorderColor = Color(0xFF5B4DBC)
-                                        )
+                                        ),
+                                        singleLine = true
                                     )
 
                                     OutlinedTextField(
@@ -657,7 +668,8 @@ fun ProfileScreen(
                                         colors = OutlinedTextFieldDefaults.colors(
                                             unfocusedBorderColor = Color.LightGray,
                                             focusedBorderColor = Color(0xFF5B4DBC)
-                                        )
+                                        ),
+                                        singleLine = true
                                     )
 
                                     Button(
@@ -904,9 +916,10 @@ fun ProfileScreen(
                                     value = "0.0",
                                     label = "Calificación"
                                 )
+                                val sessionCount by viewModel.sessionCount.collectAsState()
                                 StatisticItem(
                                     icon = Icons.Default.Groups,
-                                    value = "0",
+                                    value = sessionCount.toString(),
                                     label = "Sesiones"
                                 )
                                 val skillCount by viewModel.skillCount.collectAsState()

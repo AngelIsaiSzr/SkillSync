@@ -80,22 +80,26 @@ fun Navigation(
         }
         
         composable("search") {
-            SearchScreen(navController = navController)
+            SearchScreen(navController = navController, viewModel = profileViewModel, teachingCardViewModel = teachingCardViewModel)
         }
         
         composable("sessions") {
-            SessionsScreen(navController = navController)
+            SessionsScreen(navController = navController, viewModel = profileViewModel)
         }
         
         composable("settings") {
-            SettingsScreen(navController = navController)
+            SettingsScreen(
+                navController = navController,
+                viewModel = profileViewModel
+            )
         }
         
         composable("chat/{chatId}") { backStackEntry ->
             ChatDetailScreen(
                 chatId = backStackEntry.arguments?.getString("chatId") ?: "",
                 onBackClick = { navController.popBackStack() },
-                viewModel = chatViewModel
+                viewModel = chatViewModel,
+                navController = navController
             )
         }
         
@@ -156,6 +160,23 @@ fun Navigation(
             } else {
                 NoInternetScreen()
             }
+        }
+
+        composable("user_detail/{userId}") { backStackEntry ->
+            UserDetailScreen(
+                userId = backStackEntry.arguments?.getString("userId") ?: "",
+                navController = navController,
+                profileViewModel = profileViewModel,
+                chatViewModel = chatViewModel,
+                skillViewModel = skillViewModel
+            )
+        }
+
+        composable("chatbot") {
+            ChatBotScreen(
+                navController = navController,
+                viewModel = profileViewModel
+            )
         }
     }
 } 

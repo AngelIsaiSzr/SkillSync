@@ -9,6 +9,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import android.app.Application
+import android.util.Log
+import com.google.firebase.messaging.FirebaseMessaging
 
 class UserRepository(
     private val userDao: UserDao,
@@ -123,6 +125,19 @@ class UserRepository(
                 // Guardar en Room para acceso local
                 userDao.insertUser(user)
                 userDao.setCurrentUser(CurrentUser(value = user.id))
+
+                // Generar y guardar el token FCM
+                try {
+                    val token = FirebaseMessaging.getInstance().token.await()
+                    Log.d("UserRepository", "Token FCM generado: $token")
+                    firestore.collection("users")
+                        .document(firebaseUser.uid)
+                        .update("fcmToken", token)
+                        .await()
+                    Log.d("UserRepository", "Token FCM guardado en Firestore")
+                } catch (e: Exception) {
+                    Log.e("UserRepository", "Error al generar/guardar token FCM", e)
+                }
 
                 Result.success(user)
             } catch (e: com.google.firebase.auth.FirebaseAuthInvalidCredentialsException) {

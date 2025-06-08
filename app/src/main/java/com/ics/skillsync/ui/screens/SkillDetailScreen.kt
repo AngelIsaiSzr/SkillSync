@@ -70,15 +70,19 @@ fun SkillDetailScreen(
     val scope = rememberCoroutineScope()
     var topBarTitle by remember { mutableStateOf("Detalle de habilidad") }
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
-    var mentorSkills by remember { mutableStateOf<List<com.ics.skillsync.data.database.entity.Skill>>(emptyList()) }
+    var mentorSkills by remember {
+        mutableStateOf<List<com.ics.skillsync.data.database.entity.Skill>>(
+            emptyList()
+        )
+    }
     var mentorBio by remember { mutableStateOf("") }
     val snackbarHostState = remember { SnackbarHostState() }
-    
+
     // Obtener el rol del usuario actual
     val currentUser by profileViewModel.currentUser.collectAsState()
     val userRole = currentUser?.role ?: ""
     val canEnroll = userRole == "Aprendiz" || userRole == "Ambos roles"
-    
+
     // Observar el estado de la inscripción
     val enrollmentState by enrollmentViewModel.uiState.collectAsState()
     val isEnrolled by enrollmentViewModel.isEnrolled.collectAsState()
@@ -110,6 +114,7 @@ fun SkillDetailScreen(
                 }
                 enrollmentViewModel.clearUiState()
             }
+
             is EnrollmentViewModel.UiState.Error -> {
                 snackbarHostState.showSnackbar(
                     message = (enrollmentState as EnrollmentViewModel.UiState.Error).message,
@@ -117,9 +122,11 @@ fun SkillDetailScreen(
                 )
                 enrollmentViewModel.clearUiState()
             }
+
             is EnrollmentViewModel.UiState.Loading -> {
                 // El estado de carga se maneja en el botón
             }
+
             else -> {}
         }
     }
@@ -142,7 +149,7 @@ fun SkillDetailScreen(
                     .document(card!!.mentorId)
                     .get()
                     .await()
-                
+
                 mentorBio = mentorDoc.getString("biography") ?: ""
             }
         } catch (e: Exception) {
@@ -151,26 +158,26 @@ fun SkillDetailScreen(
         isLoading = false
         topBarTitle = card?.title ?: "Detalle de habilidad"
     }
-    
+
     SharedNavigationDrawer(
         navController = navController,
         viewModel = profileViewModel,
         drawerState = drawerState
     ) {
-    Scaffold(
-        topBar = {
-            SharedTopBar(
-                navController = navController,
-                viewModel = profileViewModel,
-                title = "SkillSync",
-                onDrawerOpen = { scope.launch { drawerState.open() } }
-            )
-        },
-        bottomBar = {
-            SharedBottomBar(navController = navController)
-        },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
-    ) { paddingValues ->
+        Scaffold(
+            topBar = {
+                SharedTopBar(
+                    navController = navController,
+                    viewModel = profileViewModel,
+                    title = "SkillSync",
+                    onDrawerOpen = { scope.launch { drawerState.open() } }
+                )
+            },
+            bottomBar = {
+                SharedBottomBar(navController = navController)
+            },
+            snackbarHost = { SnackbarHost(snackbarHostState) }
+        ) { paddingValues ->
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -179,50 +186,61 @@ fun SkillDetailScreen(
             ) {
                 when {
                     isLoading -> {
-                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
                             CircularProgressIndicator(color = Color(0xFF5B4DBC))
                         }
                     }
+
                     error != null -> {
-                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
                             Text(error ?: "Error desconocido", color = Color.Red)
                         }
                     }
+
                     card != null -> {
                         val c = card!!
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(bottom = 10.dp)
-        ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .verticalScroll(rememberScrollState())
+                                .padding(bottom = 10.dp)
+                        ) {
                             // Título y categoría
                             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
+                                modifier = Modifier
+                                    .fillMaxWidth()
                                     .padding(horizontal = 20.dp, vertical = 16.dp),
                                 verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
+                            ) {
+                                Text(
                                     text = c.title,
                                     fontSize = 26.sp,
                                     fontWeight = FontWeight.Bold,
                                     modifier = Modifier.weight(1f)
                                 )
                                 Surface(
-                                    color = Color(0xFF4CAF50),
+                                    color = getCategoryColor(c.category),
                                     shape = RoundedCornerShape(6.dp)
                                 ) {
-                    Text(
+                                    Text(
                                         text = c.category,
                                         color = Color.White,
                                         fontSize = 13.sp,
-                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                        modifier = Modifier.padding(
+                                            horizontal = 10.dp,
+                                            vertical = 4.dp
+                                        )
                                     )
                                 }
                             }
                             // Descripción
-            Text(
+                            Text(
                                 text = c.description,
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = Color(0xFF444444),
@@ -262,28 +280,38 @@ fun SkillDetailScreen(
                                     colorBg = Color(0xFFFFF9C4),
                                     iconColor = Color(0xFFF59E42)
                                 )
-                                
+
                                 // Nueva StatCardWeb para inscripción, solo visible para aprendices
                                 if (canEnroll) {
                                     StatCardWeb(
                                         icon = if (isEnrolled) Icons.Default.ExitToApp else Icons.Default.Add,
                                         value = "",  // Valor vacío porque mostraremos un botón
                                         label = if (isEnrolled) "Inscrito" else "Inscríbete",
-                                        colorBg = if (isEnrolled) Color(0xFFFFEBEE) else Color(0xFFE0E7FF),
-                                        iconColor = if (isEnrolled) Color(0xFFE53935) else Color(0xFF5B4DBC),
+                                        colorBg = if (isEnrolled) Color(0xFFFFEBEE) else Color(
+                                            0xFFE0E7FF
+                                        ),
+                                        iconColor = if (isEnrolled) Color(0xFFE53935) else Color(
+                                            0xFF5B4DBC
+                                        ),
                                         customContent = {
                                             Button(
-                                                onClick = { 
+                                                onClick = {
                                                     scope.launch {
                                                         if (isEnrolled) {
-                                                            enrollmentViewModel.unenrollFromTeachingCard(cardId)
+                                                            enrollmentViewModel.unenrollFromTeachingCard(
+                                                                cardId
+                                                            )
                                                         } else {
-                                                            enrollmentViewModel.enrollInTeachingCard(cardId)
+                                                            enrollmentViewModel.enrollInTeachingCard(
+                                                                cardId
+                                                            )
                                                         }
                                                     }
                                                 },
                                                 colors = ButtonDefaults.buttonColors(
-                                                    containerColor = if (isEnrolled) Color(0xFFE53935) else Color(0xFF5B4DBC)
+                                                    containerColor = if (isEnrolled) Color(
+                                                        0xFFE53935
+                                                    ) else Color(0xFF5B4DBC)
                                                 ),
                                                 modifier = Modifier
                                                     .fillMaxWidth(),
@@ -320,7 +348,7 @@ fun SkillDetailScreen(
                             // Contenido de tabs
                             when (selectedTab) {
                                 0 -> MentorCommunityCard(
-                                    card = c, 
+                                    card = c,
                                     mentorSkills = mentorSkills,
                                     currentUser = currentUser,
                                     snackbarHostState = snackbarHostState,
@@ -328,7 +356,11 @@ fun SkillDetailScreen(
                                     chatViewModel = chatViewModel,
                                     navController = navController
                                 )
-                                1 -> LearnerCommunityCard(card = c, enrollmentViewModel = enrollmentViewModel)
+
+                                1 -> LearnerCommunityCard(
+                                    card = c,
+                                    enrollmentViewModel = enrollmentViewModel
+                                )
                             }
                         }
                     }
@@ -364,10 +396,10 @@ private fun StatCardWeb(
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Icon(
+            ) {
+                Icon(
                     imageVector = icon,
-                        contentDescription = null,
+                    contentDescription = null,
                     tint = iconColor,
                     modifier = Modifier.size(24.dp)
                 )
@@ -380,12 +412,12 @@ private fun StatCardWeb(
             if (customContent != null) {
                 customContent()
             } else {
-                    Text(
+                Text(
                     text = value,
                     style = MaterialTheme.typography.headlineSmall,
                     color = Color(0xFF111827),
-                        fontWeight = FontWeight.Bold
-                    )
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
     }
@@ -417,13 +449,22 @@ private fun CommunityTabs(selectedTab: Int, onTabSelected: (Int) -> Unit) {
 }
 
 @Composable
-private fun TabWeb(text: String, selected: Boolean, onClick: () -> Unit, left: Boolean, modifier: Modifier = Modifier) {
+private fun TabWeb(
+    text: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    left: Boolean,
+    modifier: Modifier = Modifier
+) {
     Surface(
         modifier = modifier
             .height(40.dp),
         color = if (selected) Color.White else Color(0xFFF3F4F6),
         border = BorderStroke(1.dp, if (selected) Color(0xFF5B4DBC) else Color(0xFFF3F4F6)),
-        shape = if (left) RoundedCornerShape(topStart = 8.dp, bottomStart = 8.dp) else RoundedCornerShape(topEnd = 8.dp, bottomEnd = 8.dp),
+        shape = if (left) RoundedCornerShape(
+            topStart = 8.dp,
+            bottomStart = 8.dp
+        ) else RoundedCornerShape(topEnd = 8.dp, bottomEnd = 8.dp),
         shadowElevation = if (selected) 2.dp else 0.dp
     ) {
         TextButton(
@@ -442,7 +483,7 @@ private fun TabWeb(text: String, selected: Boolean, onClick: () -> Unit, left: B
 
 @Composable
 private fun MentorCommunityCard(
-    card: TeachingCard, 
+    card: TeachingCard,
     mentorSkills: List<com.ics.skillsync.data.database.entity.Skill>,
     currentUser: com.ics.skillsync.data.database.entity.User?,
     snackbarHostState: SnackbarHostState,
@@ -463,7 +504,7 @@ private fun MentorCommunityCard(
                 .document(card.mentorId)
                 .get()
                 .await()
-            
+
             mentorBio = mentorDoc.getString("biography") ?: ""
             mentorPhotoUrl = mentorDoc.getString("photoUrl") ?: ""
         } catch (e: Exception) {
@@ -565,7 +606,8 @@ private fun MentorCommunityCard(
                                 } else {
                                     scope.launch {
                                         try {
-                                            val chatId = chatViewModel.getOrCreateChat(card.mentorId)
+                                            val chatId =
+                                                chatViewModel.getOrCreateChat(card.mentorId)
                                             navController.navigate("chat/$chatId")
                                         } catch (e: Exception) {
                                             snackbarHostState.showSnackbar(
@@ -580,7 +622,11 @@ private fun MentorCommunityCard(
                                 .widthIn(max = 260.dp)
                                 .padding(top = 8.dp),
                             border = BorderStroke(1.dp, Color(0xFF5B4DBC)),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF5B4DBC))
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = Color(
+                                    0xFF5B4DBC
+                                )
+                            )
                         ) {
                             Icon(Icons.Default.Message, contentDescription = null)
                             Spacer(modifier = Modifier.width(6.dp))
@@ -588,7 +634,7 @@ private fun MentorCommunityCard(
                         }
 
                         Button(
-                            onClick = { /* TODO: Programar */ },
+                            onClick = { navController.navigate("sessions") },
                             modifier = Modifier
                                 .widthIn(max = 260.dp)
                                 .padding(top = 8.dp),
@@ -746,4 +792,24 @@ private fun formatDate(timestamp: Long): String {
     val date = java.util.Date(timestamp)
     val format = java.text.SimpleDateFormat("dd/MM/yyyy", java.util.Locale("es", "ES"))
     return format.format(date)
+}
+
+private fun getCategoryColor(category: String): Color {
+    return when (category) {
+        "Tecnología" -> Color(0xFF2196F3)
+        "Diseño" -> Color(0xFFC8419D)
+        "Marketing" -> Color(0xFFFFCD00)
+        "Idiomas" -> Color(0xFF4CAF50)
+        "Arte" -> Color(0xFFE91E63)
+        "Música" -> Color(0xFFF44336)
+        "Gastronomía" -> Color(0xFFFF9800)
+        "Deportes" -> Color(0xFFD8201D)
+        "Ciencias" -> Color(0xFF48C21D)
+        "Humanidades" -> Color(0xFF795548)
+        "Finanzas" -> Color(0xFF009688)
+        "Derecho" -> Color(0xFF6C3B2A)
+        "Salud" -> Color(0xFF607D8B)
+        "Educación" -> Color(0xFF1D4DD8)
+        else -> Color(0xFF9C27B0)
+    }
 } 

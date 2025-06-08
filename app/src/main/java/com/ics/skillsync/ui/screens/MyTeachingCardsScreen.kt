@@ -157,21 +157,22 @@ fun MyTeachingCardsScreen(
                         Icon(
                             imageVector = Icons.Default.Assignment,
                             contentDescription = null,
-                            modifier = Modifier.size(64.dp),
+                            modifier = Modifier.size(80.dp),
                             tint = Color(0xFF5B4DBC)
                         )
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(24.dp))
                         Text(
                             text = "No tienes tarjetas de enseñanza",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = Color(0xFF5B4DBC),
-                            textAlign = TextAlign.Center
+                            style = MaterialTheme.typography.titleLarge,
+                            color = Color(0xFF1F2937),
+                            textAlign = TextAlign.Center,
+                            fontWeight = FontWeight.Bold
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
                         Text(
-                            text = "Crea una tarjeta para compartir tus conocimientos",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color.Gray,
+                            text = "Crea una tarjeta para compartir tus conocimientos y ayudar a otros a aprender",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = Color(0xFF6B7280),
                             textAlign = TextAlign.Center,
                             modifier = Modifier.padding(horizontal = 32.dp)
                         )
@@ -185,21 +186,32 @@ fun MyTeachingCardsScreen(
                         contentPadding = PaddingValues(vertical = 16.dp)
                     ) {
                         item {
-                            Text(
-                                text = "Mis tarjetas",
-                                style = MaterialTheme.typography.headlineMedium,
-                                fontWeight = FontWeight.Bold,
-                                textAlign = TextAlign.Center,
+                            Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(bottom = 16.dp)
-                            )
+                                    .padding(bottom = 8.dp)
+                            ) {
+                                Text(
+                                    text = "Mis tarjetas",
+                                    style = MaterialTheme.typography.headlineMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF5B4DBC)
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = "Gestiona tus tarjetas de enseñanza",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = Color(0xFF6B7280)
+                                )
+                            }
                         }
                         items(myTeachingCards) { card ->
                             Card(
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp),
                                 shape = RoundedCornerShape(16.dp),
-                                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
                                 onClick = { navController.navigate("teaching_card/${card.id}") }
                             ) {
                                 Column {
@@ -225,43 +237,46 @@ fun MyTeachingCardsScreen(
                                             if (isLoading) {
                                                 CircularProgressIndicator(
                                                     modifier = Modifier
-                                                        .size(24.dp)
+                                                        .size(32.dp)
                                                         .align(Alignment.Center),
-                                                    color = Color(0xFF5B4DBC)
+                                                    color = Color(0xFF5B4DBC),
+                                                    strokeWidth = 3.dp
                                                 )
                                             }
                                         } else {
                                             Box(
                                                 modifier = Modifier
                                                     .fillMaxSize()
-                                                    .background(Color(0xFFF5F5F5)),
+                                                    .background(Color(0xFFF3F4F6)),
                                                 contentAlignment = Alignment.Center
                                             ) {
                                                 Icon(
                                                     imageVector = Icons.Default.Image,
                                                     contentDescription = "Sin imagen",
                                                     modifier = Modifier.size(48.dp),
-                                                    tint = Color(0xFF9E9E9E)
+                                                    tint = Color(0xFF9CA3AF)
                                                 )
                                             }
                                         }
                                     }
                                     Column(
-                                        modifier = Modifier.padding(16.dp)
+                                        modifier = Modifier.padding(20.dp)
                                     ) {
                                         Text(
                                             text = card.title,
                                             style = MaterialTheme.typography.titleLarge,
-                                            fontWeight = FontWeight.Bold
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFF1F2937)
                                         )
-                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Spacer(modifier = Modifier.height(12.dp))
                                         Text(
                                             text = card.description,
                                             style = MaterialTheme.typography.bodyMedium,
-                                            color = Color.Gray,
-                                            maxLines = 2
+                                            color = Color(0xFF6B7280),
+                                            maxLines = 2,
+                                            lineHeight = 20.sp
                                         )
-                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Spacer(modifier = Modifier.height(16.dp))
                                         Row(
                                             modifier = Modifier.fillMaxWidth(),
                                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -269,29 +284,31 @@ fun MyTeachingCardsScreen(
                                         ) {
                                             Surface(
                                                 color = Color(0xFF5B4DBC).copy(alpha = 0.1f),
-                                                shape = RoundedCornerShape(4.dp)
+                                                shape = RoundedCornerShape(8.dp)
                                             ) {
                                                 Text(
                                                     text = card.category,
                                                     color = Color(0xFF5B4DBC),
-                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                                    style = MaterialTheme.typography.bodySmall
+                                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                    fontWeight = FontWeight.Medium
                                                 )
                                             }
                                             Row(
                                                 verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
                                             ) {
                                                 Icon(
                                                     imageVector = Icons.Default.Person,
                                                     contentDescription = null,
-                                                    tint = Color.Gray,
-                                                    modifier = Modifier.size(16.dp)
+                                                    tint = Color(0xFF5B4DBC),
+                                                    modifier = Modifier.size(20.dp)
                                                 )
                                                 Text(
                                                     text = "${card.learnerCount} estudiantes",
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    color = Color.Gray
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                    color = Color(0xFF5B4DBC),
+                                                    fontWeight = FontWeight.Medium
                                                 )
                                             }
                                         }

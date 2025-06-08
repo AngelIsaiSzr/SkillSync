@@ -72,6 +72,16 @@ fun SkillCard(
                             SkillCategory.TECNOLOGIA -> Color(0xFF2196F3)
                             SkillCategory.MUSICA -> Color(0xFFF44336)
                             SkillCategory.ARTE -> Color(0xFFE91E63)
+                            SkillCategory.DISENO -> Color(0xFFC8419D)
+                            SkillCategory.MARKETING -> Color(0xFFFFCD00)
+                            SkillCategory.GASTRONOMIA -> Color(0xFFFF9800)
+                            SkillCategory.DEPORTES -> Color(0xFFD8201D)
+                            SkillCategory.CIENCIAS -> Color(0xFF48C21D)
+                            SkillCategory.HUMANIDADES -> Color(0xFF795548)
+                            SkillCategory.FINANZAS -> Color(0xFF009688)
+                            SkillCategory.DERECHO -> Color(0xFF6C3B2A)
+                            SkillCategory.SALUD -> Color(0xFF607D8B)
+                            SkillCategory.EDUCACION -> Color(0xFF1D4DD8)
                             else -> Color(0xFF9C27B0)
                         },
                         shape = RoundedCornerShape(4.dp),

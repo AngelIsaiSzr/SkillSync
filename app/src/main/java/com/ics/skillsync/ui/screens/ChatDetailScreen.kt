@@ -46,13 +46,15 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.ui.text.style.TextAlign
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatDetailScreen(
     chatId: String,
     onBackClick: () -> Unit,
-    viewModel: ChatViewModel = viewModel()
+    viewModel: ChatViewModel = viewModel(),
+    navController: NavController
 ) {
     val messages by viewModel.messages.collectAsState()
     val error by viewModel.error.collectAsState()
@@ -127,8 +129,18 @@ fun ChatDetailScreen(
         isLoading = false
     }
 
-    // Marcar mensajes como leídos al entrar al chat
-    LaunchedEffect(chatId, currentUserId) {
+    // Escuchar cambios en el chat para detectar si fue eliminado
+    LaunchedEffect(chatId) {
+        viewModel.chats.collect { chatList ->
+            if (chatList.none { it.id == chatId }) {
+                // El chat ya no existe, redirigir a la pantalla de chats
+                onBackClick()
+            }
+        }
+    }
+
+    // Marcar mensajes como leídos al entrar al chat y cuando se reciben nuevos mensajes
+    LaunchedEffect(chatId, currentUserId, messages) {
         if (!currentUserId.isNullOrBlank()) {
             viewModel.markMessagesAsRead(chatId, currentUserId)
         }
@@ -150,7 +162,14 @@ fun ChatDetailScreen(
             ) {
                 TopAppBar(
                     title = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.clickable {
+                                if (otherUserId.isNotEmpty()) {
+                                    navController.navigate("user_detail/$otherUserId")
+                                }
+                            }
+                        ) {
                             Box(
                                 modifier = Modifier
                                     .size(40.dp)
@@ -174,7 +193,7 @@ fun ChatDetailScreen(
                                         .ifBlank { "?" }
                                     Text(
                                         text = initials,
-                                        color = Color(0xFFE0E0E0),
+                                        color = Color(0xFFFFFFFF),
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 18.sp,
                                         modifier = Modifier.align(Alignment.Center)
@@ -374,6 +393,39 @@ private fun MessageItem(message: Message) {
     val currentUser = FirebaseAuth.getInstance().currentUser
     val isCurrentUser = message.senderId == currentUser?.uid
     val dateFormat = remember { SimpleDateFormat("hh:mm a", Locale.getDefault()) }
+    val viewModel: ChatViewModel = viewModel()
+    val otherUsers by viewModel.otherUsers.collectAsState()
+    
+    // Cargar la información del usuario si no está disponible
+    LaunchedEffect(message.senderId) {
+        if (!otherUsers.containsKey(message.senderId)) {
+            viewModel.fetchOtherUser(message.senderId)
+        }
+    }
+    
+    // Obtener información del usuario
+    val user = otherUsers[message.senderId]
+    val name = listOfNotNull(user?.firstName, user?.lastName).joinToString(" ")
+    val photoUrl = user?.photoUrl
+
+    // Función para obtener las iniciales
+    fun getInitials(name: String): String {
+        return if (name.isBlank()) {
+            // Si no hay nombre, intentar obtener el email del usuario actual
+            if (isCurrentUser) {
+                currentUser?.email?.split("@")?.firstOrNull()?.take(2)?.uppercase() ?: "?"
+            } else {
+                "?"
+            }
+        } else {
+            name.split(" ")
+                .filter { it.isNotBlank() }
+                .take(2)
+                .map { it.firstOrNull()?.toString() ?: "" }
+                .joinToString("")
+                .uppercase()
+        }
+    }
 
     Row(
         modifier = Modifier
@@ -381,52 +433,102 @@ private fun MessageItem(message: Message) {
             .padding(vertical = 3.dp, horizontal = 8.dp),
         horizontalArrangement = if (isCurrentUser) Arrangement.End else Arrangement.Start
     ) {
-        val bubbleColor = if (isCurrentUser) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
-        val contentColor = if (isCurrentUser) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+        if (!isCurrentUser) {
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFF5B4DBC))
+            ) {
+                if (!photoUrl.isNullOrBlank()) {
+                    AsyncImage(
+                        model = photoUrl,
+                        contentDescription = "Foto de perfil",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Text(
+                        text = getInitials(name),
+                        color = Color(0xFFFFFFFF),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 12.sp,
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+        }
 
-        val shape = RoundedCornerShape(
-            topStart = 16.dp,
-            topEnd = 16.dp,
-            bottomStart = if (isCurrentUser) 16.dp else 4.dp,
-            bottomEnd = if (isCurrentUser) 4.dp else 16.dp
-        )
-
-        Surface(
-            shape = shape,
-            color = bubbleColor,
-            tonalElevation = 2.dp,
-            shadowElevation = 1.dp,
-            modifier = Modifier
-                .widthIn(min = 36.dp, max = 260.dp)
+        Column(
+            horizontalAlignment = if (isCurrentUser) Alignment.End else Alignment.Start
         ) {
-            Column(
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+            Surface(
+                modifier = Modifier
+                    .widthIn(min = 108.dp, max = 280.dp)
+                    .padding(vertical = 4.dp),
+                shape = RoundedCornerShape(
+                    topStart = 16.dp,
+                    topEnd = 16.dp,
+                    bottomStart = if (isCurrentUser) 16.dp else 4.dp,
+                    bottomEnd = if (isCurrentUser) 4.dp else 16.dp
+                ),
+                color = if (isCurrentUser) Color(0xFF5B4DBC) else Color(0xFFEEEEEE)
             ) {
                 Text(
                     text = message.content,
-                    color = contentColor,
-                    fontSize = 15.sp
+                    modifier = Modifier.padding(12.dp),
+                    color = if (isCurrentUser) Color.White else Color(0xFF111827),
+                    fontSize = 16.sp
                 )
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.align(Alignment.End)
-                ) {
-                    Text(
-                        text = dateFormat.format(message.timestamp),
-                        fontSize = 11.sp,
-                        color = contentColor.copy(alpha = 0.7f),
-                        modifier = Modifier.padding(end = if (isCurrentUser) 2.dp else 0.dp)
+            }
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.align(if (isCurrentUser) Alignment.End else Alignment.Start)
+            ) {
+                Text(
+                    text = dateFormat.format(message.timestamp),
+                    fontSize = 12.sp,
+                    color = Color.Gray,
+                    modifier = Modifier.padding(horizontal = 4.dp)
+                )
+                if (isCurrentUser) {
+                    Icon(
+                        imageVector = if (message.isRead) Icons.Filled.DoneAll else Icons.Filled.Done,
+                        contentDescription = if (message.isRead) "Leído" else "Enviado",
+                        tint = if (message.isRead) Color(0xFF4FC3F7) else Color.Gray,
+                        modifier = Modifier
+                            .padding(start = 1.dp)
+                            .size(15.dp)
                     )
-                    if (isCurrentUser) {
-                        Icon(
-                            imageVector = if (message.isRead) Icons.Filled.DoneAll else Icons.Filled.Done,
-                            contentDescription = if (message.isRead) "Leído" else "Enviado",
-                            tint = if (message.isRead) Color(0xFF4FC3F7) else Color.Gray,
-                            modifier = Modifier
-                                .padding(start = 2.dp)
-                                .size(15.dp)
-                        )
-                    }
+                }
+            }
+        }
+
+        if (isCurrentUser) {
+            Spacer(modifier = Modifier.width(8.dp))
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFF5B4DBC))
+            ) {
+                if (!photoUrl.isNullOrBlank()) {
+                    AsyncImage(
+                        model = photoUrl,
+                        contentDescription = "Foto de perfil",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Text(
+                        text = getInitials(name),
+                        color = Color(0xFFE0E0E0),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 12.sp,
+                        modifier = Modifier.align(Alignment.Center)
+                    )
                 }
             }
         }

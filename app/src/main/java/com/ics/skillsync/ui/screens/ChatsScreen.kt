@@ -8,7 +8,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Login
 import androidx.compose.material.icons.automirrored.filled.Message
+import androidx.compose.material.icons.filled.Login
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -37,6 +39,7 @@ import com.ics.skillsync.ui.viewmodel.ChatViewModel
 import com.ics.skillsync.ui.viewmodel.ProfileViewModel
 import kotlin.system.exitProcess
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.SmartToy
 import com.ics.skillsync.data.database.entity.User as FirestoreUser
 import com.google.firebase.auth.FirebaseAuth
 
@@ -82,6 +85,20 @@ fun ChatsScreen(
             bottomBar = {
                 SharedBottomBar(navController = navController)
             },
+            floatingActionButton = {
+                if (isAuthenticated) {
+                    FloatingActionButton(
+                        onClick = { navController.navigate("chatbot") },
+                        containerColor = Color(0xFF5B4DBC),
+                        contentColor = Color.White
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.SmartToy,
+                            contentDescription = "Chat con IA"
+                        )
+                    }
+                }
+            },
             containerColor = Color.White
         ) { paddingValues ->
             if (!isAuthenticated) {
@@ -112,7 +129,7 @@ fun ChatsScreen(
                     )
                     
                     Spacer(modifier = Modifier.height(24.dp))
-                    
+
                     Button(
                         onClick = { navController.navigate("profile") },
                         modifier = Modifier
@@ -123,7 +140,13 @@ fun ChatsScreen(
                         ),
                         shape = RoundedCornerShape(8.dp)
                     ) {
-                        Text("Iniciar sesión")
+                        Icon(
+                            imageVector = Icons.Default.Login,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Iniciar Sesión")
                     }
                 }
             } else {

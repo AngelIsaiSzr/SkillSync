@@ -62,6 +62,7 @@ fun TeachingCardScreen(
     
     var showExperienceLevelMenu by remember { mutableStateOf(false) }
     var showCategoryMenu by remember { mutableStateOf(false) }
+    var isProcessing by remember { mutableStateOf(false) }
 
     // Lista de niveles de experiencia
     val experienceLevels = listOf(
@@ -404,6 +405,7 @@ fun TeachingCardScreen(
             Button(
                 onClick = {
                     if (validateFields()) {
+                        isProcessing = true
                         if (cardId == null) {
                             viewModel.createTeachingCard(
                                 title = title,
@@ -429,9 +431,21 @@ fun TeachingCardScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(48.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF5B4DBC))
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF5B4DBC),
+                    disabledContainerColor = Color(0xFF5B4DBC).copy(alpha = 0.6f)
+                ),
+                enabled = !isProcessing
             ) {
-                Text(if (cardId == null) "Crear Tarjeta" else "Actualizar Tarjeta")
+                if (isProcessing) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = Color.White,
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Text(if (cardId == null) "Crear Tarjeta" else "Actualizar Tarjeta")
+                }
             }
         }
     }
@@ -444,10 +458,12 @@ fun TeachingCardScreen(
                 navController.navigate("my_teaching_cards") {
                     popUpTo("my_teaching_cards") { inclusive = true }
                 }
+                isProcessing = false
             }
             is TeachingCardViewModel.UiState.Error -> {
                 snackbarHostState.showSnackbar(state.message)
                 viewModel.clearUiState()
+                isProcessing = false
             }
             else -> {}
         }

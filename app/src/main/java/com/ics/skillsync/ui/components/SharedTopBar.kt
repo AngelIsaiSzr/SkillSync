@@ -175,15 +175,17 @@ fun SharedDrawerContent(
             )
         }
         
-        NavigationDrawerItem(
-            icon = { Icon(Icons.Default.DateRange, contentDescription = "Sesiones") },
-            label = { Text("Sesiones") },
-            selected = false,
-            onClick = {
-                scope.launch { onDrawerClose() }
-                navController.navigate("sessions")
-            }
-        )
+        if (isAuthenticated) {
+            NavigationDrawerItem(
+                icon = { Icon(Icons.Default.DateRange, contentDescription = "Sesiones") },
+                label = { Text("Sesiones") },
+                selected = false,
+                onClick = {
+                    scope.launch { onDrawerClose() }
+                    navController.navigate("sessions")
+                }
+            )
+        }
         
         NavigationDrawerItem(
             icon = { Icon(Icons.Default.Settings, contentDescription = "Configuración") },
