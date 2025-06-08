@@ -22,7 +22,7 @@ class NetworkViewModel : ViewModel() {
 
     fun initialize(context: Context) {
         connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        
+
         networkCallback = object : ConnectivityManager.NetworkCallback() {
             override fun onAvailable(network: Network) {
                 viewModelScope.launch {
