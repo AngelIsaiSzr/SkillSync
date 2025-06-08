@@ -32,6 +32,7 @@ import java.util.*
 import coil.compose.AsyncImage
 import androidx.compose.ui.layout.ContentScale
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.ics.skillsync.BuildConfig
 
 data class ChatMessage(
     val id: String = UUID.randomUUID().toString(),
@@ -59,7 +60,7 @@ fun ChatBotScreen(
     val generativeModel = remember {
         GenerativeModel(
             modelName = "gemini-2.0-flash",
-            apiKey = "AIzaSyDvHCxj7LbmMjq163WuHFibSOgOKk5OCvA"
+            apiKey = BuildConfig.GEMINI_API_KEY
         )
     }
 
