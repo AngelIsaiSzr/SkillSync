@@ -26,13 +26,13 @@ import com.google.ai.client.generativeai.GenerativeModel
 import com.google.ai.client.generativeai.type.GenerateContentResponse
 import com.ics.skillsync.ui.components.SharedTopBar
 import com.ics.skillsync.ui.viewmodel.ProfileViewModel
+import com.ics.skillsync.utils.ApiKeys
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 import coil.compose.AsyncImage
 import androidx.compose.ui.layout.ContentScale
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.ics.skillsync.BuildConfig
 
 data class ChatMessage(
     val id: String = UUID.randomUUID().toString(),
@@ -60,7 +60,7 @@ fun ChatBotScreen(
     val generativeModel = remember {
         GenerativeModel(
             modelName = "gemini-2.0-flash",
-            apiKey = BuildConfig.GEMINI_API_KEY
+            apiKey = ApiKeys.GEMINI_API_KEY
         )
     }
 

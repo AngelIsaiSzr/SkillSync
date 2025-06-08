@@ -21,7 +21,7 @@ class SkillSyncApplication : Application() {
                     Log.w("SkillSyncApplication", "Error al obtener el token FCM", task.exception)
                     return@addOnCompleteListener
                 }
-                
+
                 val token = task.result
                 Log.d("SkillSyncApplication", "Token FCM obtenido: $token")
                 

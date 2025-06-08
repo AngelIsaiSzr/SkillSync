@@ -79,7 +79,7 @@ fun EditProfileScreen(
     var showPhotoOptions by remember { mutableStateOf(false) }
     var showDeleteConfirmation by remember { mutableStateOf(false) }
     var isPhotoDeleted by remember { mutableStateOf(false) }
-    
+
     // Launcher para seleccionar imagen de la galería
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
