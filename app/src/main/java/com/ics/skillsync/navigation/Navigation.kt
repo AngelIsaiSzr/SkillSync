@@ -94,6 +94,13 @@ fun Navigation(
             )
         }
         
+        composable("about") {
+            AboutScreen(
+                navController = navController,
+                viewModel = profileViewModel
+            )
+        }
+        
         composable("chat/{chatId}") { backStackEntry ->
             ChatDetailScreen(
                 chatId = backStackEntry.arguments?.getString("chatId") ?: "",

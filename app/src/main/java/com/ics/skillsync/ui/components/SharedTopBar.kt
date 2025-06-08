@@ -197,6 +197,16 @@ fun SharedDrawerContent(
             }
         )
 
+        NavigationDrawerItem(
+            icon = { Icon(Icons.Default.Info, contentDescription = "Acerca de") },
+            label = { Text("Acerca de") },
+            selected = false,
+            onClick = {
+                scope.launch { onDrawerClose() }
+                navController.navigate("about")
+            }
+        )
+
         Spacer(modifier = Modifier.weight(1f))
 
         NavigationDrawerItem(
