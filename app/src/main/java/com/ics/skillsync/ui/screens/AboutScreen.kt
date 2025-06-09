@@ -155,7 +155,7 @@ fun AboutScreen(
                             "complementen de manera fluida y accesible."
                 )
 
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(16.dp))
             }
         }
     }

@@ -380,7 +380,7 @@ fun ChatMessageItem(message: ChatMessage, viewModel: ProfileViewModel) {
                     val name = listOfNotNull(currentUser?.firstName, currentUser?.lastName).joinToString(" ")
                     Text(
                         text = getInitials(name),
-                        color = Color(0xFFE0E0E0),
+                        color = Color.White,
                         fontWeight = FontWeight.Bold,
                         fontSize = 12.sp,
                         modifier = Modifier.align(Alignment.Center)
